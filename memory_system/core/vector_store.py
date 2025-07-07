@@ -1,8 +1,6 @@
 """memory_system.core.vector_store
 =================================
-
-Asynchronous FAISS‑based vector store with automatic background
-maintenance.
+Asynchronous FAISS‑based vector store with automatic background maintenance.
 
 This module provides:
 * ``AbstractVectorStore`` – minimal async interface, easy to mock.
@@ -195,9 +193,7 @@ def _to_faiss_array(vectors: Sequence[Sequence[float]]) -> _np.ndarray:
     return arr
 
 def _to_faiss_ids(ids: Sequence[str]) -> _np.ndarray:
-    import numpy as np
-
-    int_ids = np.array([int(uuid.UUID(_id)) % (2**63) for _id in ids], dtype="int64")
+    int_ids = _np.array([int(uuid.UUID(_id)) % (2**63) for _id in ids], dtype="int64")
     return int_ids
 
 def _from_faiss_id(idx: int) -> str:
