@@ -31,9 +31,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-import numpy as _np
-
 import faiss
+import numpy as _np
 
 _LOGGER = logging.getLogger(__name__)
 
