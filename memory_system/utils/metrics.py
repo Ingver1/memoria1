@@ -44,10 +44,23 @@ R = TypeVar("R")
 
 
 def _wrap_sync(metric: Histogram) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    """Decorator factory for async function timing."""
+    """Decorator factory for synchronous function timing."""
 
     def decorator(fn: Callable[P, R]) -> Callable[P, R]:
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            with metric.time():
+                return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def _wrap_async(metric: Histogram) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
+    """Decorator factory for async function timing."""
+
+    def decorator(fn: Callable[P, Coroutine[Any, Any, R]]) -> Callable[P, Coroutine[Any, Any, R]]:
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             with metric.time():
                 return await fn(*args, **kwargs)
 
