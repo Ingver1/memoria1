@@ -1,4 +1,4 @@
-# AI-memory- — System Architecture
+# memoria — System Architecture
 
 <details>
 <summary>Mermaid diagram — end-to-end flow (click to expand)</summary>
