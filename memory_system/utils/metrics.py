@@ -7,7 +7,6 @@ import time
 from collections.abc import Callable, Coroutine
 from typing import Any, ParamSpec, TypeVar
 
-
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 
 log = logging.getLogger(__name__)
