@@ -25,7 +25,7 @@ class MemoryBase(BaseModel):
 
     text: str = Field(..., min_length=1, max_length=10_000)
     role: str = Field("user", max_length=32, description="Conversation role label")
-    tags: list[str] = Field(default_factory=list, max_items=10)
+    tags: list[str] = Field(default_factory=list, max_length=10)
 
 
 class MemoryCreate(MemoryBase):
