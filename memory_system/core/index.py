@@ -26,11 +26,11 @@ from dataclasses import dataclass, field
 from threading import RLock
 from time import perf_counter
 
-import faiss  # type: ignore
+import faiss
 import numpy as np
 from numpy.typing import NDArray
 
-from memory_system.exceptions import StorageError
+from memory_system.utils.exceptions import StorageError
 from memory_system.utils.metrics import prometheus_counter
 
 log = logging.getLogger(__name__)
