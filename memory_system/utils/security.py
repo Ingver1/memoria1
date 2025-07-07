@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import Final, cast
 
 from cryptography.fernet import Fernet, InvalidToken
-from pydantic import BaseModel, SecretStr, FieldValidationInfo, field_validator
+from pydantic import BaseModel, FieldValidationInfo, SecretStr, field_validator
 
 __all__ = [
     "CryptoContext",
