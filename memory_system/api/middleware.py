@@ -17,10 +17,12 @@ import os
 import time
 from collections import deque
 from collections.abc import MutableMapping
+from typing import Optional
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse, Response
+from starlette.types import ASGIApp
 
 __all__ = [
     "session_tracker",
@@ -72,7 +74,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
 
     def __init__(
         self,
-        app,
+        app: ASGIApp,
         max_requests: int = 100,
         window_seconds: int = 60,
         bypass_endpoints: Optional[set[str]] = None,
@@ -129,7 +131,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
 class MaintenanceModeMiddleware(BaseHTTPMiddleware):
     """Middleware to block all non-exempt requests when maintenance mode is enabled."""
 
-    def __init__(self, app, allowed_paths: Optional[set[str]] = None) -> None:
+    def __init__(self, app: ASGIApp, allowed_paths: Optional[set[str]] = None) -> None:
         super().__init__(app)
         # Paths that are always allowed even during maintenance (e.g. admin toggle)
         self.allowed_paths: set[str] = allowed_paths or {
