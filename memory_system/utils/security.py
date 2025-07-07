@@ -32,10 +32,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping, MutableMapping
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Final
+from typing import Final, cast
 
 from cryptography.fernet import Fernet, InvalidToken
-from pydantic import BaseModel, SecretStr, field_validator
+from pydantic import BaseModel, SecretStr, FieldValidationInfo, field_validator
 
 __all__ = [
     "CryptoContext",
@@ -59,7 +59,9 @@ class KeyMetadata(BaseModel):
 
     @field_validator("expires_at")
     @classmethod
-    def _exp_after_created(cls, v: datetime | None, info):  # type: ignore[override]
+    def _exp_after_created(
+        cls, v: datetime | None, info: FieldValidationInfo
+    ) -> datetime | None:
         if v is not None and v <= info.data["created_at"]:
             raise ValueError("expires_at must be after created_at")
         return v
@@ -106,7 +108,8 @@ class LocalKeyBackend(KeyManagementBackend):
     # ---------------------------------------------------------------------
     def _read(self) -> MutableMapping[str, Mapping[str, str]]:
         if self._path.exists():
-            return json.loads(self._path.read_text())
+            data = json.loads(self._path.read_text())
+            return cast(MutableMapping[str, Mapping[str, str]], data)
         return {}
 
     def _write(self, data: Mapping[str, Mapping[str, str]]) -> None:
@@ -116,7 +119,7 @@ class LocalKeyBackend(KeyManagementBackend):
     # Interface implementation
     # ---------------------------------------------------------------------
     def load_all(self) -> list[ManagedKey]:
-        return [ManagedKey(**entry) for entry in self._read().values()]
+        return [ManagedKey.model_validate(entry) for entry in self._read().values()]
 
     def save(self, key: ManagedKey) -> None:
         ring = self._read()
@@ -275,7 +278,7 @@ class CryptoContext:
 import asyncio  # noqa: E402 – late import w/ uvicorn
 
 
-async def start_maintenance(ctx: CryptoContext, interval_hours: interval_hours = 6) -> None:  # type: ignore[valid-type]
+async def start_maintenance(ctx: CryptoContext, interval_hours: int = 6) -> None:
     """Run *maybe_rotate_keys* every *interval_hours* until cancelled."""
 
     async def _loop() -> None:  # inner to attach cancellation gracefully
