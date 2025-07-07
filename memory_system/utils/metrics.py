@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable, Coroutine
+from typing import Any, ParamSpec, TypeVar
+
 
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 
@@ -37,24 +39,15 @@ PROCESS_UPTIME.set(0.0)
 # Timing decorators for measuring execution time of functions
 
 
-def _wrap_sync(metric: Histogram) -> Callable:
-    """Decorator factory for synchronous function timing."""
-
-    def decorator(fn: Callable) -> Callable:
-        def wrapper(*args, **kwargs):
-            with metric.time():
-                return fn(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-def _wrap_async(metric: Histogram) -> Callable:
+def _wrap_sync(metric: Histogram) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator factory for async function timing."""
 
-    def decorator(fn: Callable[..., Coroutine]) -> Callable[..., Coroutine]:
-        async def wrapper(*args, **kwargs):
+    def decorator(fn: Callable[P, R]) -> Callable[P, R]:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             with metric.time():
                 return await fn(*args, **kwargs)
 
