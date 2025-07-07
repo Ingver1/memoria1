@@ -1,6 +1,6 @@
 """memory_system.core.vector_store
 =================================
-import numpy as _np
+
 Asynchronous FAISS‑based vector store with automatic background
 maintenance.
 
@@ -33,7 +33,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-import faiss  # type: ignore
+import numpy as _np
+
+import faiss
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,17 +84,17 @@ class AsyncFaissHNSWStore(AbstractVectorStore):
         self._maintenance_interval = maintenance_interval
         self._loop = asyncio.get_running_loop()
 
-        # load or create index in executor to avoid blocking
+        # load or create index
         if index_path.exists():
             _LOGGER.info("Loading FAISS index from %s", index_path)
-            self._index = self._loop.run_in_executor(None, faiss.read_index, str(index_path))
+            self._index = faiss.read_index(str(index_path))
         else:
             _LOGGER.info("Creating new FAISS HNSW index (dim=%d)", dim)
             index = faiss.IndexHNSWFlat(dim, 32)
             index.hnsw.efConstruction = 200
             self._index = index
             # write initial empty index so replica exists
-            self._loop.run_in_executor(None, faiss.write_index, self._index, str(index_path))
+            faiss.write_index(self._index, str(index_path))
 
         # metadata sidecar (id -> json str) stored in simple dict; caller may persist separately
         self._metadata: dict[str, dict[str, Any]] = {}
@@ -186,21 +188,17 @@ class AsyncFaissHNSWStore(AbstractVectorStore):
 # ---------------------------------------------------------------------------
 # ––– Utility helpers –––
 # ---------------------------------------------------------------------------
-
-
-def _to_faiss_array(vectors: Sequence[Sequence[float]]) -> _np.ndarray:  # type: ignore
+def _to_faiss_array(vectors: Sequence[Sequence[float]]) -> _np.ndarray:
     arr = _np.array(vectors, dtype="float32")
     if arr.ndim == 1:
         arr = arr.reshape(1, -1)
     return arr
 
-
-def _to_faiss_ids(ids: Sequence[str]) -> faiss.IDSelectorBatch:  # type: ignore
+def _to_faiss_ids(ids: Sequence[str]) -> _np.ndarray:
     import numpy as np
 
     int_ids = np.array([int(uuid.UUID(_id)) % (2**63) for _id in ids], dtype="int64")
     return int_ids
-
 
 def _from_faiss_id(idx: int) -> str:
     return str(uuid.UUID(int=idx))
