@@ -22,7 +22,6 @@ from dataclasses import dataclass
 from typing import cast
 
 import numpy as np
-
 from memory_system.config.settings import UnifiedSettings
 from memory_system.utils.cache import SmartCache
 from memory_system.utils.metrics import MET_ERRORS_TOTAL
