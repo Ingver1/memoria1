@@ -147,6 +147,7 @@ class SQLiteMemoryStore:
             cursor = await conn.execute(
                 "SELECT * FROM memories WHERE id = ?", (memory_id,)
             )
+            row = await cursor.fetchone()
             return self._row_to_memory(row) if row else None
         finally:
             await self._release(conn)
@@ -159,6 +160,18 @@ class SQLiteMemoryStore:
             await conn.execute("SELECT 1")
         finally:
             await self._release(conn)
+
+    def _row_to_memory(self, row: aiosqlite.Row) -> Memory:
+         """Map a database row to a :class:`Memory` instance."""
+        meta_raw = row["metadata"]
+        metadata = json.loads(meta_raw) if meta_raw not in (None, "null") else None
+        return Memory(
+            id=row["id"],
+            text=row["text"],
+            created_at=dt.datetime.fromisoformat(row["created_at"]),
+            importance=row["importance"],
+            metadata=metadata,
+        )
 
     # ------------------------------------------------------------------
     # CRUD helpers
@@ -194,7 +207,8 @@ class SQLiteMemoryStore:
             params.append(limit)
 
             # execute and map results
-            rows = await conn.execute_fetchall(sql, params)
+            cursor = await conn.execute(sql, params)
+            rows = await cursor.fetchall()
             return [self._row_to_memory(r) for r in rows]
         finally:
             await self._release(conn)
@@ -202,9 +216,6 @@ class SQLiteMemoryStore:
 ###############################################################################
 # FastAPI integration helpers (optional import‑time dep)
 ###############################################################################
-
-    FastAPI = Request = None  # type: ignore
-
 
 async def lifespan_context(app: "FastAPI") -> AsyncIterator[None]:  # pragma: no cover
     """FastAPI lifespan function that attaches a SQLiteMemoryStore to ``app.state``."""
@@ -243,6 +254,7 @@ async def get_store(path: str | Path | None = None) -> SQLiteMemoryStore:
             dsn = f"file:{path}?mode=rwc" if path else "file:memories.db?mode=rwc"
             _STORE = SQLiteMemoryStore(dsn)
             await _STORE.initialise()
+            assert _STORE is not None
         return _STORE
 
 from memory_system.core.enhanced_store import (
