@@ -49,7 +49,7 @@ async def create_memory(
             text=payload.text,
             role=payload.role,
             tags=payload.tags,
-            importance=0.0
+            importance=0.0,
             embedding=embedding[0].tolist(),
             created_at=now,
             updated_at=now,
