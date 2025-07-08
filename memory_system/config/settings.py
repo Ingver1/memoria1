@@ -232,7 +232,7 @@ def configure_logging(settings: UnifiedSettings) -> None:
 
     from importlib import resources
 
-    import yaml
+    import yaml  # type: ignore[import-untyped]
 
     cfg_path = resources.files("memory_system") / "config" / "logging.yaml"
     with cfg_path.open("r", encoding="utf-8") as fp:
