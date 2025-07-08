@@ -13,21 +13,43 @@ class ndarray(list):
             super().__init__([data])
         self._update_shape()
 
-    def _update_shape(self):
+    def _update_shape(self) -> None:
         if self and isinstance(self[0], list):
             self.shape = (len(self), len(self[0]))
         else:
             self.shape = (len(self),)
 
-    def astype(self, dtype, copy=True):
+    @property
+    def ndim(self) -> int:
+        return len(self.shape)
+
+    def astype(self, dtype: Any, copy: bool = True) -> "ndarray":
         # dtype is ignored; return copy if requested
         if copy:
             return ndarray([x[:] if isinstance(x, list) else x for x in self])
         return self
 
+    def reshape(self, *shape: int) -> "ndarray":
+        if len(shape) == 2 and shape[0] == 1 and shape[1] == -1:
+            flat: list[Any] = []
+            for x in self:
+                if isinstance(x, list):
+                    flat.extend(x)
+                else:
+                    flat.append(x)
+            return ndarray([flat])
+        raise NotImplementedError
+
 float32 = float
 uint8 = int
+floating = float
 
+def asarray(obj: Sequence[Any], dtype: Any | None = None) -> "ndarray":
+    return ndarray(list(obj))
+
+def array(obj: Sequence[Any], dtype: Any | None = None) -> "ndarray":
+    return ndarray(list(obj))
+    
 def frombuffer(buffer: bytes, dtype=uint8):
     return ndarray(list(buffer))
 
@@ -77,6 +99,9 @@ __all__ = [
     "ndarray",
     "float32",
     "uint8",
+    "floating",
+    "asarray",
+    "array",
     "frombuffer",
     "tile",
     "vstack",
