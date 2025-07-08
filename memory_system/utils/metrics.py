@@ -91,9 +91,10 @@ def update_system_metrics() -> None:
 
 def get_prometheus_metrics() -> str:
     """Return the latest metrics as plaintext (Prometheus exposition format)."""
-    return generate_latest().decode()
+    data = generate_latest()
+    return data.decode() if isinstance(data, bytes) else str(data)
 
 
 def get_metrics_content_type() -> str:
     """Return the appropriate Content-Type for Prometheus metrics."""
-    return CONTENT_TYPE_LATEST
+    return str(CONTENT_TYPE_LATEST)
