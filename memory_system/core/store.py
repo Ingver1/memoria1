@@ -162,7 +162,7 @@ class SQLiteMemoryStore:
             await self._release(conn)
 
     def _row_to_memory(self, row: aiosqlite.Row) -> Memory:
-         """Map a database row to a :class:`Memory` instance."""
+        """Map a database row to a :class:`Memory` instance."""
         meta_raw = row["metadata"]
         metadata = json.loads(meta_raw) if meta_raw not in (None, "null") else None
         return Memory(
