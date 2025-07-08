@@ -9,8 +9,6 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from starlette.responses import Response
-
 from memory_system.api.middleware import check_dependencies, session_tracker
 from memory_system.api.schemas import HealthResponse, StatsResponse
 from memory_system.config.settings import UnifiedSettings, get_settings
@@ -19,6 +17,7 @@ from memory_system.utils.metrics import get_metrics_content_type, get_prometheus
 
 log = logging.getLogger(__name__)
 router = APIRouter(tags=["Health & Monitoring"])
+from starlette.responses import Response
 
 # Dependency helpers for route functions
 
