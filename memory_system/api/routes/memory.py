@@ -5,6 +5,7 @@ from __future__ import annotations
 # ─────────────────────────────── stdlib ────────────────────────────────
 import logging
 from datetime import UTC, datetime
+from typing import cast
 
 # ────────────────────────────── third-party ──────────────────────────────
 from fastapi import APIRouter, HTTPException, Query, Request, status
@@ -34,11 +35,11 @@ Settings = UnifiedSettings  # alias for brevity
 # ────────────────────────────────────────────────────────────────────────
 
 
-@router.post("/", response_model=MemoryRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=MemoryRead, status_code=status.HTTP_201_CREATED) # type: ignore[misc]
 async def create_memory(
     payload: MemoryCreate,
-    store: EnhancedMemoryStore = None,
-    embedding_service: EnhancedEmbeddingService = None,
+    store: EnhancedMemoryStore,
+    embedding_service: EnhancedEmbeddingService,
 ) -> MemoryRead:
     """Persist a single memory row and return the stored record."""
     try:
@@ -48,7 +49,7 @@ async def create_memory(
             text=payload.text,
             role=payload.role,
             tags=payload.tags,
-            importance=payload.importance,
+            importance=0.0
             embedding=embedding[0].tolist(),
             created_at=now,
             updated_at=now,
@@ -63,18 +64,18 @@ async def create_memory(
 # ────────────────────────────────────────────────────────────────────────
 
 
-@router.post("/search", response_model=list[MemorySearchResult])
+@router.post("/search", response_model=list[MemorySearchResult]) # type: ignore[misc]
 async def search_memories(
     query: MemoryQuery,
-    store: EnhancedMemoryStore = None,
-    embedding_service: EnhancedEmbeddingService = None,
+    store: EnhancedMemoryStore,
+    embedding_service: EnhancedEmbeddingService,
 ) -> list[MemorySearchResult]:
     """Search memories using semantic similarity."""
     try:
         query_embedding = await embedding_service.encode([query.query])
         results = await store.semantic_search(
             vector=query_embedding[0].tolist(),
-            k=query.k,
+            k=query.top_k,
             include_embeddings=query.include_embeddings,
         )
         log.info("Search query '%s' returned %s results", query.query, len(results))
@@ -96,13 +97,13 @@ async def search_memories(
 # ────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/", response_model=list[MemoryRead])
+@router.get("/", response_model=list[MemoryRead]) # type: ignore[misc]
 async def list_memories(
     request: Request,
     user_id: str | None = Query(None, description="User ID filter"),
 ) -> list[MemoryRead]:
     """Return all memories, optionally filtered by user_id."""
-    store: EnhancedMemoryStore = request.app.state.store  # type: ignore[attr-defined]
+    store = cast(EnhancedMemoryStore, request.app.state.store)
     try:
         raw_rows = await store.list_memories(user_id=user_id)
         result = [MemoryRead.model_validate(r) for r in raw_rows]
@@ -119,11 +120,11 @@ async def list_memories(
 # ────────────────────────────────────────────────────────────────────────
 
 
-@router.post("/batch", response_model=list[MemoryRead])
+@router.post("/batch", response_model=list[MemoryRead]) # type: ignore[misc]
 async def create_memories_batch(
     memories: list[MemoryCreate],
-    store: EnhancedMemoryStore = None,
-    embedding_service: EnhancedEmbeddingService = None,
+    store: EnhancedMemoryStore,
+    embedding_service: EnhancedEmbeddingService,
 ) -> list[MemoryRead]:
     """Create multiple memories in one call (limit 100)."""
     if len(memories) > 100:
@@ -138,7 +139,7 @@ async def create_memories_batch(
                 text=src.text,
                 role=src.role,
                 tags=src.tags,
-                importance=src.importance,
+                importance=0.0,
                 embedding=vec.tolist(),
                 created_at=now,
                 updated_at=now,
@@ -157,10 +158,10 @@ async def create_memories_batch(
 # ────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/stats", response_model=dict[str, int])
+@router.get("/stats", response_model=dict[str, int]) # type: ignore[misc]
 async def get_memory_stats(
+    store: EnhancedMemoryStore,
     user_id: str | None = None,
-    store: EnhancedMemoryStore = None,
 ) -> dict[str, int]:
     """Return basic usage statistics."""
     log.info("Stats requested for user_id=%s", user_id)
