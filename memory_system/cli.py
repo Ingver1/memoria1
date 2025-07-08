@@ -136,9 +136,14 @@ show_default="env/localhost",
 ),
 ) -> None:  # noqa: D401
     """Add a new memory row to the store."""
-async def _run_add() -> None:
+
+    async def _run_add() -> None:
         async with _client(url) as client:
-            payload = {"text": text, "importance": importance, "metadata": metadata or {}}
+            payload = {
+                "text": text,
+                "importance": importance,
+                "metadata": metadata or {},
+            }
             rprint(f"[grey]POST {url}/memory/add …")
             resp = await client.post("/memory/add", json=payload)
             resp.raise_for_status()
@@ -158,7 +163,8 @@ show_default="env/localhost",
 ),
 ) -> None:  # noqa: D401
     """Semantic search in the memory vector store."""
-async def _run_search() -> None:
+
+    async def _run_search() -> None:
         async with _client(url) as client:
             params = {"q": query, "k": k}
             rprint(f"[grey]GET {url}/memory/search?q={query}&k={k} …")
@@ -176,7 +182,7 @@ async def _run_search() -> None:
 
             rprint(table)
 
-        asyncio.run(_run_search())
+    asyncio.run(_run_search())
 
 
 @app.command()
@@ -189,7 +195,8 @@ show_default="env/localhost",
 ),
 ) -> None:  # noqa: D401
     """Delete a memory by ID."""
-async def _run_delete() -> None:
+
+    async def _run_delete() -> None:
         async with _client(url) as client:
             rprint(f"[grey]DELETE {url}/memory/{mem_id} …")
             resp = await client.delete(f"/memory/{mem_id}")
@@ -211,7 +218,8 @@ show_default="env/localhost",
 ),
 ) -> None:  # noqa: D401
     """Bulk‑import memories from a .jsonl file."""
-async def _run_import() -> None:
+
+    async def _run_import() -> None:
         async with _client(url) as client:
             added = 0
             async with asyncio.Semaphore(8):
