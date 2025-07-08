@@ -98,7 +98,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
     def _get_user_id(request: Request) -> str:
         """Derive a stable ID from the Authorization header or client IP."""
         auth = request.headers.get("authorization") or getattr(request.client, "host", "unknown")
-        return hashlib.sha256(auth.encode()).hexdigest()
+        return hashlib.sha256(str(auth).encode()).hexdigest()
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         # Skip rate limiting for bypassed endpoints
