@@ -19,7 +19,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from memory_system.config.settings import UnifiedSettings, configure_logging, get_settings
 from memory_system.core.store import SQLiteMemoryStore, get_memory_store, get_store
-from memory_system.memory_helpers import add, search
+from memory_system.memory_helpers import MemoryStoreProtocol, add, search
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ router = APIRouter(tags=["Memory"], prefix="/memory")
 @router.post("/", summary="Add memory", response_description="Memory UUID")
 async def add_memory(request: Request, body: dict[str, Any]) -> dict[str, str]:
     """Add a new piece of memory."""
-    store: SQLiteMemoryStore = get_memory_store(request)
+    store = cast(MemoryStoreProtocol, get_memory_store(request))
     mem = await add(body["text"], metadata=body.get("metadata", {}), store=store)
     return {"id": mem.memory_id}
 
@@ -40,7 +40,7 @@ async def add_memory(request: Request, body: dict[str, Any]) -> dict[str, str]:
 @router.get("/search", summary="Search memory", response_description="Search results")
 async def search_memory(request: Request, q: str, limit: int = 5) -> Any:
     """Semantic search across stored memories."""
-    store: SQLiteMemoryStore = get_memory_store(request)
+    store = cast(MemoryStoreProtocol, get_memory_store(request))
     return await search(q, k=limit, store=store)
 
 
