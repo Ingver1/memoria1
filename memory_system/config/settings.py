@@ -230,7 +230,7 @@ class UnifiedSettings(BaseSettings):
 def configure_logging(settings: UnifiedSettings) -> None:
     """Apply ``logging.yaml`` and optionally switch to JSON handlers."""
 
-    from importlib import resources
+    from importlib import resources, util
 
     import yaml  # type: ignore[import-untyped]
 
@@ -238,13 +238,13 @@ def configure_logging(settings: UnifiedSettings) -> None:
     with cfg_path.open("r", encoding="utf-8") as fp:
         logging_cfg = yaml.safe_load(fp)
 
-    # If python-json-logger is not installed, fall back to the standard
-    # logging formatter so tests can run without the optional dependency.
-    try:
-        import pythonjsonlogger.jsonlogger  # noqa: F401
-    except ModuleNotFoundError:
+    # Fallback gracefully when optional dependency `python-json-logger` is not
+    # available by using the standard ``logging.Formatter``.  Tests do not
+    # install the package, so we strip the custom formatter configuration if the
+    # module cannot be imported.
+    if util.find_spec("pythonjsonlogger") is None:
         json_formatter = logging_cfg.get("formatters", {}).get("json")
-        if isinstance(json_formatter, dict):
+        if json_formatter:
             json_formatter.pop("()", None)
             
     if os.getenv("LOG_JSON") == "1":
