@@ -32,16 +32,24 @@ try:
     from rich.panel import Panel
     from rich.table import Table
 except ModuleNotFoundError:  # rich not installed -> degrade gracefully
-    def rprint(*args: Any, **kwargs: Any) -> None:  # fallback printer
+    from typing import IO
+
+    def rprint(
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        file: IO[str] | None = None,
+        flush: bool = False,
+    ) -> None:  # fallback printer
         if not os.environ.get("AI_MEM_RICH_WARNING_SHOWN"):
             print(
                 "[hint] Install extras for colours:  pip install ai-memory[cli]",
                 file=sys.stderr,
             )
             os.environ["AI_MEM_RICH_WARNING_SHOWN"] = "1"
-        print(*args, **kwargs)
+        print(*objects, sep=sep, end=end, file=file, flush=flush)
 
-    class Panel:  # type: ignore[too-few-public-methods]
+    class Panel:
         """Minimal shim so code stays import-safe without *rich*."""
 
         def __init__(self, renderable: str, **_: Any) -> None:  # noqa: D401
@@ -50,7 +58,7 @@ except ModuleNotFoundError:  # rich not installed -> degrade gracefully
         def __str__(self) -> str:  # noqa: D401
             return self.renderable
 
-    class Table:  # type: ignore[too-few-public-methods]
+    class Table:
         """Plain ASCII table shim used when *rich* is missing."""
 
         def __init__(self, title: str | None = None, **_: Any) -> None:  # noqa: D401
@@ -88,7 +96,7 @@ DEFAULT_API = "[http://localhost:8000](http://localhost:8000)"
 
 # ---------------------------------------------------------------------------
 
-async def _client(base_url: str) -> httpx.AsyncClient:  # noqa: D401
+def _client(base_url: str) -> httpx.AsyncClient:  # noqa: D401
     """Return shared httpx client with reasonable timeout."""
     return httpx.AsyncClient(base_url=base_url, timeout=30.0)
     
@@ -128,17 +136,15 @@ show_default="env/localhost",
 ),
 ) -> None:  # noqa: D401
     """Add a new memory row to the store."""
+async def _run_add() -> None:
+        async with _client(url) as client:
+            payload = {"text": text, "importance": importance, "metadata": metadata or {}}
+            rprint(f"[grey]POST {url}/memory/add …")
+            resp = await client.post("/memory/add", json=payload)
+            resp.raise_for_status()
+            rprint(Panel("Memory ID → [bold green]" + resp.json()["id"]))
 
-
-async def _run() -> None:  # helper to allow ``asyncio.run()``
-    async with _client(url) as client:
-        payload = {"text": text, "importance": importance, "metadata": metadata or {}}
-        rprint(f"[grey]POST {url}/memory/add …")
-        resp = await client.post("/memory/add", json=payload)
-        resp.raise_for_status()
-        rprint(Panel("Memory ID → [bold green]" + resp.json()["id"]))
-
-asyncio.run(_run())
+    asyncio.run(_run_add())
 
 
 @app.command()
@@ -152,27 +158,25 @@ show_default="env/localhost",
 ),
 ) -> None:  # noqa: D401
     """Semantic search in the memory vector store."""
+async def _run_search() -> None:
+        async with _client(url) as client:
+            params = {"q": query, "k": k}
+            rprint(f"[grey]GET {url}/memory/search?q={query}&k={k} …")
+            resp = await client.get("/memory/search", params=params)
+            resp.raise_for_status()
+            results = resp.json()
 
+            table = Table(title=f"Top-{k} results for '{query}'")
+            table.add_column("Score", justify="right")
+            table.add_column("Text", justify="left")
 
-async def _run() -> None:
-    async with _client(url) as client:
-        params = {"q": query, "k": k}
-        rprint(f"[grey]GET {url}/memory/search?q={query}&k={k} …")
-        resp = await client.get("/memory/search", params=params)
-        resp.raise_for_status()
-        results = resp.json()
+            for row in results:
+                text_snip = row["text"][:80] + ("…" if len(row["text"]) > 80 else "")
+                table.add_row(f"{row['score']:.2f}", text_snip)
 
-        table = Table(title=f"Top-{k} results for '{query}'")
-        table.add_column("Score", justify="right")
-        table.add_column("Text", justify="left")
+            rprint(table)
 
-        for row in results:
-            text_snip = row["text"][:80] + ("…" if len(row["text"]) > 80 else "")
-            table.add_row(f"{row['score']:.2f}", text_snip)
-
-        rprint(table)
-
-asyncio.run(_run())
+        asyncio.run(_run_search())
 
 
 @app.command()
@@ -185,16 +189,14 @@ show_default="env/localhost",
 ),
 ) -> None:  # noqa: D401
     """Delete a memory by ID."""
+async def _run_delete() -> None:
+        async with _client(url) as client:
+            rprint(f"[grey]DELETE {url}/memory/{mem_id} …")
+            resp = await client.delete(f"/memory/{mem_id}")
+            resp.raise_for_status()
+            rprint(Panel("Deleted ✔", style="bold red"))
 
-
-async def _run() -> None:
-    async with _client(url) as client:
-        rprint(f"[grey]DELETE {url}/memory/{mem_id} …")
-        resp = await client.delete(f"/memory/{mem_id}")
-        resp.raise_for_status()
-        rprint(Panel("Deleted ✔", style="bold red"))
-
-asyncio.run(_run())
+    asyncio.run(_run_delete())
 
 
 @app.command()
@@ -209,22 +211,20 @@ show_default="env/localhost",
 ),
 ) -> None:  # noqa: D401
     """Bulk‑import memories from a .jsonl file."""
+async def _run_import() -> None:
+        async with _client(url) as client:
+            added = 0
+            async with asyncio.Semaphore(8):
+                for line in file.read_text().splitlines():
+                    if not line.strip():
+                        continue
+                    payload = json.loads(line)
+                    resp = await client.post("/memory/add", json=payload)
+                    resp.raise_for_status()
+                    added += 1
+            rprint(Panel(f"Imported [bold green]{added}[/] memories"))
 
-
-async def _run() -> None:
-    async with _client(url) as client:
-        added = 0
-        async with asyncio.Semaphore(8):
-            for line in file.read_text().splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
-                resp = await client.post("/memory/add", json=payload)
-                resp.raise_for_status()
-                added += 1
-        rprint(Panel(f"Imported [bold green]{added}[/] memories"))
-
-asyncio.run(_run())
+    asyncio.run(_run_import())
 
 
 if __name__ == "__main__":  # pragma: no cover
