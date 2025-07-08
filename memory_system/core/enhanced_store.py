@@ -9,6 +9,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+__all__ = ["EnhancedMemoryStore", "HealthComponent"]
+
 from memory_system.config.settings import UnifiedSettings
 
 
@@ -57,3 +59,30 @@ class EnhancedMemoryStore:
     async def close(self) -> None:
         """Close the store."""
         pass
+
+    # ------------------------------------------------------------------
+    # Stubs matching the expected public API used by routes/tests
+    # ------------------------------------------------------------------
+    async def add_memory(
+        self,
+        *,
+        text: str,
+        role: str | None = None,
+        tags: list[str] | None = None,
+        importance: float,
+        embedding: list[float],
+        created_at: float,
+        updated_at: float,
+    ) -> Any:
+        """Add a memory entry (not implemented)."""
+        raise NotImplementedError
+
+    async def semantic_search(
+        self, *, vector: list[float], k: int = 5, include_embeddings: bool = False
+    ) -> list[Any]:
+        """Semantic search stub."""
+        raise NotImplementedError
+
+    async def list_memories(self, user_id: str | None = None) -> list[Any]:
+        """List stored memories (stub)."""
+        raise NotImplementedError
