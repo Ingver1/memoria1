@@ -3,11 +3,11 @@
 import asyncio
 import time
 
-import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import httpx
 from memory_system.api.app import create_app
 from memory_system.api.schemas import (
     ErrorResponse,
