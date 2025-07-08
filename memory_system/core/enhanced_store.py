@@ -70,9 +70,9 @@ class EnhancedMemoryStore:
         role: str | None = None,
         tags: list[str] | None = None,
         importance: float,
-        embedding: list[float],
         valence: float = 0.0,
         emotional_intensity: float = 0.0,
+        embedding: list[float],
         created_at: float,
         updated_at: float,
     ) -> Any:
