@@ -202,7 +202,7 @@ class UnifiedSettings(BaseSettings):
 
     def get_config_summary(self) -> dict[str, Any]:
         def scrub(obj: BaseModel) -> dict[str, Any]:
-            data = json.loads(obj.model_dump_json())
+            data: dict[str, Any] = json.loads(obj.model_dump_json())
             data.pop("encryption_key", None)
             data.pop("api_token", None)
             data["has_key"] = bool(getattr(obj, "encryption_key", ""))
@@ -232,7 +232,7 @@ def configure_logging(settings: UnifiedSettings) -> None:
 
     from importlib import resources
 
-    import yaml
+    import yaml # type: ignore[import]
 
     cfg_path = resources.files("memory_system") / "config" / "logging.yaml"
     with cfg_path.open("r", encoding="utf-8") as fp:
