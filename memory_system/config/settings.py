@@ -1,185 +1,254 @@
-"""memory_system.config.settings
-================================
-Elegant, single-source runtime configuration for **AI-memory-**.
-
-This module exposes a single :class:`Settings` object (based on
-*Pydantic-Settings* v2) that transparently merges configuration from several
-sources – highest priority first:
-
-1. **Environment variables** with the ``AI_`` prefix (12-factor first)
-2. Explicit keyword arguments when instantiating ``Settings(...)``
-3. External YAML file pointed to by ``AI_SETTINGS_YAML``
-4. External TOML file pointed to by ``AI_SETTINGS_TOML``
-5. A local ``.env`` file in the project root
-
-It also provides :func:`configure_logging` – a helper that selects either the
-*plaintext* or *JSON* root handler depending on the ``LOG_JSON`` environment
-variable.
-
-"""
+"""Application configuration models for the Unified Memory System."""
 
 from __future__ import annotations
 
+import json
 import logging.config
 import os
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-# --------------------------------------------------------------------------- #
-# Optional config-file parsers                                                #
-# --------------------------------------------------------------------------- #
+from cryptography.fernet import Fernet, InvalidToken
+from pydantic import BaseModel, Field, PositiveInt, field_validator
+from pydantic_settings import BaseSettings
 
-try:  # TOML support: stdlib on 3.11+, otherwise fall back to tomli
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover
-    import tomli as tomllib  # type: ignore
-
-try:  # YAML support (optional)
-    import yaml
-except ModuleNotFoundError:  # pragma: no cover
-    yaml = None  # type: ignore
-
-# --------------------------------------------------------------------------- #
-# Pydantic                                                                    #
-# --------------------------------------------------------------------------- #
-
-from pydantic import Field, PositiveInt, SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic_settings import BaseSettings as Settings
-
-# --------------------------------------------------------------------------- #
-# Helpers to load external config files                                       #
-# --------------------------------------------------------------------------- #
+__all__ = [
+    "DatabaseConfig",
+    "ModelConfig",
+    "SecurityConfig",
+    "PerformanceConfig",
+    "ReliabilityConfig",
+    "APIConfig",
+    "MonitoringConfig",
+    "UnifiedSettings",
+    "configure_logging",
+    "get_settings",
+]
 
 
-def _load_toml(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    with path.open("rb") as fp:  # tomllib expects *binary* mode
-        return tomllib.load(fp) or {}
+class DatabaseConfig(BaseModel):
+    """Paths and connection limits for the storage backend."""
+
+    db_path: Path = Path("data/memory.db")
+    vec_path: Path = Path("data/memory.vectors")
+    cache_path: Path = Path("data/memory.cache")
+    connection_pool_size: PositiveInt = 10
+
+    model_config = {"frozen": True}
 
 
-def _load_yaml(path: Path) -> dict[str, Any]:
-    if yaml is None or not path.exists():
-        return {}
-    with path.open("r", encoding="utf-8") as fp:
-        return yaml.safe_load(fp) or {}
+class ModelConfig(BaseModel):
+    """Embedding model and ANN index parameters."""
+
+    model_name: str = "all-MiniLM-L6-v2"
+    batch_add_size: PositiveInt = 128
+    hnsw_m: PositiveInt = 32
+    hnsw_ef_construction: PositiveInt = 200
+    hnsw_ef_search: PositiveInt = 100
+    vector_dim: PositiveInt = 384
+
+    model_config = {"frozen": True}
 
 
-# --------------------------------------------------------------------------- #
-# Base settings class                                                         #
-# --------------------------------------------------------------------------- #
+class SecurityConfig(BaseModel):
+    """Security related options."""
+
+    encrypt_at_rest: bool = False
+    encryption_key: str = ""
+    filter_pii: bool = True
+    max_text_length: PositiveInt = 10_000
+    rate_limit_per_minute: PositiveInt = 1_000
+    api_token: str = "your-secret-token-change-me"
+
+    model_config = {"frozen": True}
+
+    @field_validator("encryption_key")
+    @classmethod
+    def _validate_key(cls, value: str) -> str:
+        if not value:
+            return value
+        try:
+            Fernet(value.encode())
+        except (ValueError, InvalidToken) as exc:  # pragma: no cover
+            raise ValueError("Invalid encryption key") from exc
+        return value
+
+    @field_validator("api_token")
+    @classmethod
+    def _validate_token(cls, value: str) -> str:
+        if len(value) < 8:
+            raise ValueError("API token must be at least 8 characters long")
+        return value
+
+
+class PerformanceConfig(BaseModel):
+    """Tuning knobs for throughput and caching."""
+
+    max_workers: PositiveInt = 4
+    cache_size: PositiveInt = 1_000
+    cache_ttl_seconds: PositiveInt = 300
+    rebuild_inrs: PositiveInt = 24
+
+    model_config = {"frozen": True}
+    
+    @field_validator("max_workers")
+    @classmethod
+    def _workers_range(cls, value: int) -> int:
+        if value < 1 or value > 32:
+            raise ValueError("max_workers must be between 1 and 32")
+        return value
+
+
+class ReliabilityConfig(BaseModel):
+    """Retries and backup settings."""
+
+    max_retries: PositiveInt = 3
+    retry_delay_seconds: float = 1.0
+    backup_enabled: bool = True
+    backup_interval_hours: PositiveInt = 24
+
+    model_config = {"frozen": True}
+
+
+class APIConfig(BaseModel):
+    """HTTP API options."""
+
+    host: str = "0.0.0.0"
+    port: PositiveInt = 8000
+    enable_cors: bool = True
+    enable_api: bool = True
+    cors_origins: list[str] = Field(default_factory=lambda: ["*"])
+
+    model_config = {"frozen": True}
+
+    @field_validator("port")
+    @classmethod
+    def _validate_port(cls, value: int) -> int:
+        if value < 0 or value > 65_535 or (value != 0 and value < 1024):
+            raise ValueError("port must be between 1024 and 65535")
+        return value
+
+
+class MonitoringConfig(BaseModel):
+    """Metrics and diagnostics configuration."""
+
+    enable_metrics: bool = True
+    enable_rate_limiting: bool = True
+    prom_port: PositiveInt = 9_100
+    health_check_interval: PositiveInt = 30
+    log_level: str = "INFO"
+
+    model_config = {"frozen": True}
+
+    @field_validator("prom_port")
+    @classmethod
+    def _validate_prom_port(cls, value: int) -> int:
+        if value < 1024 or value > 65_535:
+            raise ValueError("prom_port must be between 1024 and 65535")
+        return value
 
 
 class UnifiedSettings(BaseSettings):
-    """Application settings loaded from env, optional files and defaults."""
+    """Aggregate all configuration sections."""
 
-    # ------------------------------------------------------------------ Core #
-    host: str = Field("0.0.0.0", description="Bind address for Uvicorn")
-    port: PositiveInt = Field(8000, description="Listening port")
-    reload: bool = Field(False, description="Reload on code changes (development only)")
+    version: str = "0.8.0a0"
+    profile: str = "development"
+    database: DatabaseConfig = DatabaseConfig()
+    model: ModelConfig = ModelConfig()
+    security: SecurityConfig = SecurityConfig()
+    performance: PerformanceConfig = PerformanceConfig()
+    reliability: ReliabilityConfig = ReliabilityConfig()
+    api: APIConfig = APIConfig()
+    monitoring: MonitoringConfig = MonitoringConfig()
 
-    # -------------------------------------------------------------- Database #
-    sqlite_dsn: str = Field("sqlite:///memory.db", description="SQLite DSN")
-    pool_size: PositiveInt = Field(5, description="`aiosqlite` connection-pool size")
+    model_config = {"env_prefix": "AI_", "env_file": ".env"}
 
-    # ------------------------------------------------------------- Security #
-    jwt_secret: SecretStr = Field(..., description="JWT signing / verification key")
-
-    # ----------------------------------------------------------- Version 🏷️ #
-    version: str = Field(
-        "0.8.0a0",  # PEP-440
-        description="Application version",
-    )
-
-    # ----------------------------------------------------------- Logging 🪵 #
-    log_level: str = Field("INFO", description="Root log level")
-    log_level_per_module: str = Field(
-        "",
-        description="Comma-separated overrides, e.g. "
-        "'memory_system.core=DEBUG,uvicorn.error=WARNING'",
-    )
-
-    # ------------------------------------------------------ OpenTelemetry 🌐 #
-    otlp_endpoint: str = Field("", description="OTLP collector endpoint (empty → disabled)")
-
-    # ---------------------------------------------------------------- model #
-    model_config = SettingsConfigDict(env_prefix="AI_", env_file=".env")
-
-    # -------------------------------------------------------- Custom parser #
-    @field_validator("log_level_per_module", mode="before")
     @classmethod
-    def _parse_levels(cls, raw: str | list[str]) -> dict[str, str]:
-        pairs: list[str] = raw.split(",") if isinstance(raw, str) else raw
-        out: dict[str, str] = {}
-        for pair in pairs:
-            if "=" not in pair:
-                continue
-            module, level = (s.strip() for s in pair.split("=", 1))
-            if module and level:
-                out[module] = level.upper()
-        return out
+    def for_testing(cls) -> "UnifiedSettings":
+        return cls(
+            profile="testing",
+            performance=PerformanceConfig(max_workers=2, cache_size=100, cache_ttl_seconds=10),
+            monitoring=MonitoringConfig(enable_metrics=False, health_check_interval=5),
+            api=APIConfig(port=0),
+            security=SecurityConfig(api_token="test-token-12345678", rate_limit_per_minute=10_000),
+        )
+        
+    @classmethod
+    def for_production(cls) -> "UnifiedSettings":
+        return cls(
+            profile="production",
+            performance=PerformanceConfig(max_workers=8, cache_size=5_000),
+            security=SecurityConfig(encrypt_at_rest=True, filter_pii=True),
+        )
+    
+    @classmethod
+    def for_development(cls) -> "UnifiedSettings":
+        return cls(
+            profile="development",
+            database=DatabaseConfig(connection_pool_size=5),
+            performance=PerformanceConfig(max_workers=2, cache_size=500),
+            monitoring=MonitoringConfig(enable_metrics=True, log_level="DEBUG", health_check_interval=10),
+            api=APIConfig(enable_cors=True),
+        )
+
+    def get_database_url(self) -> str:
+        return f"sqlite:///{self.database.db_path}"
+
+    def validate_production_ready(self) -> list[str]:
+        issues: list[str] = []
+        if not self.security.api_token or self.security.api_token == "your-secret-token-change-me":
+            issues.append("API token is not set")
+        return issues
+
+    def get_config_summary(self) -> dict[str, Any]:
+        def scrub(obj: BaseModel) -> dict[str, Any]:
+            data = json.loads(obj.model_dump_json())
+            data.pop("encryption_key", None)
+            data.pop("api_token", None)
+            data["has_key"] = bool(getattr(obj, "encryption_key", ""))
+            return data
+
+        return {
+            "database": scrub(self.database),
+            "model": scrub(self.model),
+            "security": scrub(self.security),
+            "performance": scrub(self.performance),
+            "reliability": scrub(self.reliability),
+            "api": scrub(self.api),
+            "monitoring": scrub(self.monitoring),
+        }
+
+    def save_to_file(self, path: Path) -> None:
+        path.write_text(self.model_dump_json(indent=2))
+
+    @classmethod
+    def load_from_file(cls, path: Path) -> "UnifiedSettings":
+        data = json.loads(path.read_text())
+        return cls(**data)
 
 
-# --------------------------------------------------------------------------- #
-# Helper to pick JSON vs plaintext logging                                    #
-# --------------------------------------------------------------------------- #
+def configure_logging(settings: UnifiedSettings) -> None:
+    """Apply ``logging.yaml`` and optionally switch to JSON handlers."""
 
-
-def configure_logging(settings: Settings) -> None:
-    """Apply ``logging.yaml`` and switch to JSON if ``LOG_JSON=1``."""
     from importlib import resources
 
-    import yaml  # safe: we only reach here if pyyaml is installed
+    import yaml
 
-    cfg_path = (
-        resources.files("memory_system") / "config" / "logging.yaml"  # type: ignore[arg-type]
-    )
+    cfg_path = resources.files("memory_system") / "config" / "logging.yaml"
     with cfg_path.open("r", encoding="utf-8") as fp:
         logging_cfg = yaml.safe_load(fp)
 
     if os.getenv("LOG_JSON") == "1":
-        # Swap handlers & formatter to JSON
         logging_cfg["root"]["handlers"] = ["json_console"]
 
-    # Apply per-module overrides
-    for module, level in settings.log_level_per_module.items():
-        logging_cfg.setdefault("loggers", {}).setdefault(module, {})["level"] = level
-
-    logging.config.dictConfig(logging_cfg)
+        logging.config.dictConfig(logging_cfg)
 
 
-# --------------------------------------------------------------------------- #
-# Public accessor (singleton-style, lazy)                                     #
-# --------------------------------------------------------------------------- #
-
-_settings: Settings | None = None
+        _settings: UnifiedSettings | None = None
 
 
-def get_settings() -> Settings:
-    """Return a cached :class:`Settings` instance (lazy singleton)."""
+def get_settings() -> UnifiedSettings:
+    """Return a cached ``UnifiedSettings`` instance."""
     global _settings
     if _settings is None:
-        # Customise source order: env → kwargs → YAML → TOML → .env
-        def _settings_customise_sources(_: Any) -> tuple[Callable[..., dict[str, Any]], ...]:  # noqa: ANN401
-            return (
-                BaseSettings.SettingsConfigDict.env_settings,
-                BaseSettings.SettingsConfigDict.init_settings,
-                _yaml_source,
-                _toml_source,
-                BaseSettings.SettingsConfigDict.file_secret_settings,
-            )
-
-        def _yaml_source(_: Settings) -> dict[str, Any]:
-            path = Path(os.getenv("AI_SETTINGS_YAML", ""))
-            return _load_yaml(path)
-
-        def _toml_source(_: Settings) -> dict[str, Any]:
-            path = Path(os.getenv("AI_SETTINGS_TOML", ""))
-            return _load_toml(path)
-
-        Settings.settings_customise_sources = _settings_customise_sources  # type: ignore[attr-defined]
-        _settings = UnifiedSettings()  # type: ignore[call-arg]
-
-    return _settings
+        _settings = UnifiedSettings()
