@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 
 from cryptography.fernet import Fernet
 from memory_system.config.settings import (
@@ -20,6 +19,7 @@ from memory_system.config.settings import (
     UnifiedSettings,
     get_settings,
 )
+from pydantic import ValidationError
 
 
 class TestDatabaseConfig:
