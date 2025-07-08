@@ -204,7 +204,7 @@ class EmbeddingService:
         """Directly encode a batch of texts (runs in background thread)."""
         if self._model is None:
             raise EmbeddingError("Embedding model is not loaded")
-        return cast(np.ndarray, self._model.encode(texts))  # returns an array of embeddings
+        return self._model.encode(texts)  # returns an array of embeddings
 
     def _cache_key(self, text: str) -> str:
         """Compute a cache key for a given text input."""
