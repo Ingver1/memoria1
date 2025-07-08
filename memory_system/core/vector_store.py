@@ -197,3 +197,13 @@ def _to_faiss_ids(ids: Sequence[str]) -> _np.ndarray:
 
 def _from_faiss_id(idx: int) -> str:
     return str(uuid.UUID(int=idx))
+
+
+# Backwards compatibility alias
+VectorStore = AsyncFaissHNSWStore
+
+__all__ = [
+    "AbstractVectorStore",
+    "AsyncFaissHNSWStore",
+    "VectorStore",
+]
