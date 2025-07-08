@@ -254,7 +254,7 @@ async def get_store(path: str | Path | None = None) -> SQLiteMemoryStore:
             dsn = f"file:{path}?mode=rwc" if path else "file:memories.db?mode=rwc"
             _STORE = SQLiteMemoryStore(dsn)
             await _STORE.initialise()
-            assert _STORE is not None
+        assert _STORE is not None
         return _STORE
 
 from memory_system.core.enhanced_store import (
