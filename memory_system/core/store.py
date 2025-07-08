@@ -18,7 +18,7 @@ from collections.abc import AsyncIterator
 # ───────────────────────── local imports ───────────────────────────
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 
 # ─────────────────────── third-party imports ───────────────────────
 import aiosqlite
