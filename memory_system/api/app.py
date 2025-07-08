@@ -10,14 +10,14 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRouter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-from memory_system.config.settings import Settings, configure_logging, get_settings
+from memory_system.config.settings import UnifiedSettings, configure_logging, get_settings
 from memory_system.core.store import SQLiteMemoryStore, create_memory_store, get_memory_store
 from memory_system.unified_memory import add, search
 
@@ -38,7 +38,7 @@ async def add_memory(request: Request, body: dict[str, Any]) -> dict[str, str]:
 
 
 @router.get("/search", summary="Search memory", response_description="Search results")
-async def search_memory(request: Request, q: str, limit: int = 5):
+async def search_memory(request: Request, q: str, limit: int = 5) -> Any:
     """Semantic search across stored memories."""
     store: SQLiteMemoryStore = get_memory_store(request)
     return await search(q, limit=limit, store=store)
@@ -49,17 +49,17 @@ async def search_memory(request: Request, q: str, limit: int = 5):
 # ---------------------------------------------------------------------------
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:  # pragma: no cover
+def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: no cover
     settings = settings or get_settings()
 
-    configure_logging()
+    configure_logging(settings)
 
     app = FastAPI(title="AI‑memory‑ API", version="0.8.0")
 
     # CORS (can be tightened in prod)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=settings.api.cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -91,13 +91,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:  # pragma: no cover
 
     @app.on_event("shutdown")
     async def _shutdown() -> None:
-        store: SQLiteMemoryStore = app.state.store  # type: ignore[attr-defined]
+        store = cast(SQLiteMemoryStore, app.state.store)
         await store.close()
         logger.info("SQLiteMemoryStore closed")
 
     # Dependency bridge -----------------------------------------------------
-    app.dependency_overrides[get_memory_store] = lambda req: req.app.state.store  # type: ignore[arg-type]
-
+    app.dependency_overrides[get_memory_store] = lambda req: cast(SQLiteMemoryStore, req.app.state.store)
+    
     # Routers ---------------------------------------------------------------
     app.include_router(router)
 
