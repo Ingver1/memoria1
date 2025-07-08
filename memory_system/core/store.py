@@ -18,7 +18,7 @@ from collections.abc import AsyncIterator
 # ───────────────────────── local imports ───────────────────────────
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, cast
 
 # ─────────────────────── third-party imports ───────────────────────
 import aiosqlite
@@ -230,7 +230,7 @@ async def lifespan_context(app: "FastAPI") -> AsyncIterator[None]:  # pragma: no
 
 
 def get_memory_store(request: "Request") -> SQLiteMemoryStore:  # pragma: no cover
-    return request.app.state.memory_store
+    return cast(SQLiteMemoryStore, request.app.state.memory_store)
     
 ###############################################################################
 # Singleton helper
