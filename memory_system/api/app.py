@@ -18,7 +18,7 @@ from fastapi.routing import APIRouter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from memory_system.config.settings import UnifiedSettings, configure_logging, get_settings
-from memory_system.core.store import SQLiteMemoryStore, create_memory_store, get_memory_store
+from memory_system.core.store import SQLiteMemoryStore, get_memory_store, get_store
 from memory_system.unified_memory import add, search
 
 logger = logging.getLogger(__name__)
@@ -86,13 +86,13 @@ def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: n
     # Lifespan --------------------------------------------------------------
     @app.on_event("startup")
     async def _startup() -> None:
-        app.state.store = await create_memory_store(settings)
+        app.state.store = await get_store(settings.database.db_path)
         logger.info("SQLiteMemoryStore initialised")
 
     @app.on_event("shutdown")
     async def _shutdown() -> None:
         store = cast(SQLiteMemoryStore, app.state.store)
-        await store.close()
+        await store.aclose()
         logger.info("SQLiteMemoryStore closed")
 
     # Dependency bridge -----------------------------------------------------
