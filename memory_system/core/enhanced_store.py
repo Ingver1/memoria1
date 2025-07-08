@@ -71,6 +71,8 @@ class EnhancedMemoryStore:
         tags: list[str] | None = None,
         importance: float,
         embedding: list[float],
+        valence: float = 0.0,
+        emotional_intensity: float = 0.0,
         created_at: float,
         updated_at: float,
     ) -> Any:
