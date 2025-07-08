@@ -27,11 +27,11 @@ from threading import RLock
 from time import perf_counter
 
 import faiss
-import numpy as np
-from numpy.typing import NDArray
 
+import numpy as np
 from memory_system.utils.exceptions import StorageError
 from memory_system.utils.metrics import prometheus_counter
+from numpy.typing import NDArray
 
 log = logging.getLogger(__name__)
 
