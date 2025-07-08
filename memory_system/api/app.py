@@ -12,11 +12,11 @@ import logging
 import os
 from typing import Any, cast
 
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRouter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
 from memory_system.config.settings import UnifiedSettings, configure_logging, get_settings
 from memory_system.core.store import SQLiteMemoryStore, get_memory_store, get_store
 from memory_system.memory_helpers import MemoryStoreProtocol, add, search
