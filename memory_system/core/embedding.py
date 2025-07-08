@@ -19,6 +19,7 @@ import logging
 import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -172,7 +173,7 @@ class EmbeddingService:
         cached = self.cache.get(key)
         if cached is not None:
             # Return cached embedding, ensure shape (1, dim)
-            return cached.reshape(1, -1)
+            return cast(np.ndarray, cached).reshape(1, -1)
         # Not in cache: enqueue for batch processing
         loop = asyncio.get_event_loop()
         future: asyncio.Future[np.ndarray] = loop.create_future()
@@ -203,7 +204,7 @@ class EmbeddingService:
         """Directly encode a batch of texts (runs in background thread)."""
         if self._model is None:
             raise EmbeddingError("Embedding model is not loaded")
-        return self._model.encode(texts)  # returns an array of embeddings
+        return cast(np.ndarray, self._model.encode(texts))  # returns an array of embeddings
 
     def _cache_key(self, text: str) -> str:
         """Compute a cache key for a given text input."""
