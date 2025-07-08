@@ -8,9 +8,10 @@ import os
 from pathlib import Path
 from typing import Any
 
-from cryptography.fernet import Fernet, InvalidToken
 from pydantic import BaseModel, Field, PositiveInt, field_validator
 from pydantic_settings import BaseSettings
+
+from cryptography.fernet import Fernet, InvalidToken
 
 __all__ = [
     "DatabaseConfig",
