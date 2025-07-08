@@ -47,6 +47,9 @@ class ndarray(list[Any]):
             return ndarray([flat])
         raise NotImplementedError
 
+def __truediv__(self, other: float) -> "ndarray":
+        return ndarray([x / other for x in self])
+
 float32 = float
 uint8 = int
 floating = float
@@ -60,7 +63,7 @@ def array(obj: Sequence[Any], dtype: Any | None = None) -> "ndarray":
 def frombuffer(buffer: bytes, dtype: type | int = uint8) -> "ndarray":
     return ndarray(list(buffer))
 
-def tile(arr: "ndarray", reps: int):
+def tile(arr: "ndarray", reps: int) -> "ndarray":
     data = []
     for _ in range(reps):
         data.extend([row[:] if isinstance(row, list) else row for row in arr])
