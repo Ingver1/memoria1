@@ -15,7 +15,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 # ────────────────────────────── third-party imports ────────────────────────────
 import httpx
@@ -29,8 +29,8 @@ import typer
 
 try:
     from rich import print as rprint
-    from rich.panel import Panel
-    from rich.table import Table
+    from rich.panel import Panel as RichPanel
+    from rich.table import Table as RichTable
 except ModuleNotFoundError:  # rich not installed -> degrade gracefully
     from typing import IO
 
@@ -49,7 +49,7 @@ except ModuleNotFoundError:  # rich not installed -> degrade gracefully
             os.environ["AI_MEM_RICH_WARNING_SHOWN"] = "1"
         print(*objects, sep=sep, end=end, file=file, flush=flush)
 
-    class Panel:
+    class RichPanel:
         """Minimal shim so code stays import-safe without *rich*."""
 
         def __init__(self, renderable: str, **_: Any) -> None:  # noqa: D401
@@ -58,7 +58,7 @@ except ModuleNotFoundError:  # rich not installed -> degrade gracefully
         def __str__(self) -> str:  # noqa: D401
             return self.renderable
 
-    class Table:
+    class RichTable:
         """Plain ASCII table shim used when *rich* is missing."""
 
         def __init__(self, title: str | None = None, **_: Any) -> None:  # noqa: D401
@@ -76,6 +76,8 @@ except ModuleNotFoundError:  # rich not installed -> degrade gracefully
             lines = [" | ".join(r) for r in self.rows]
             return "\n".join(head + lines)
 
+Panel = RichPanel
+Table = RichTable
 # ---------------------------------------------------------------------------
 
 # Typer application
@@ -109,7 +111,7 @@ def _metadata_option(
     if not value:
         return None
     try:
-        return json.loads(value)
+        return cast(dict[str, Any], json.loads(value))
     except json.JSONDecodeError as exc:  # pragma: no cover
         raise typer.BadParameter(f"Invalid JSON: {exc}") from exc
 
@@ -119,7 +121,7 @@ def _metadata_option(
 
 # ---------------------------------------------------------------------------
 
-@app.command()
+@app.command() # type: ignore[misc]
 def add(
 text: str = typer.Argument(..., help="Text to remember."),
 importance: float = typer.Option(0.5, help="0-1 importance weighting."),
@@ -152,7 +154,7 @@ show_default="env/localhost",
     asyncio.run(_run_add())
 
 
-@app.command()
+@app.command() # type: ignore[misc]
 def search(
 query: str = typer.Argument(..., help="Search query."),
 k: int = typer.Option(5, help="Number of results."),
@@ -166,7 +168,7 @@ show_default="env/localhost",
 
     async def _run_search() -> None:
         async with _client(url) as client:
-            params = {"q": query, "k": k}
+            params: dict[str, str | int] = {"q": query, "k": k}
             rprint(f"[grey]GET {url}/memory/search?q={query}&k={k} …")
             resp = await client.get("/memory/search", params=params)
             resp.raise_for_status()
@@ -185,7 +187,7 @@ show_default="env/localhost",
     asyncio.run(_run_search())
 
 
-@app.command()
+@app.command() # type: ignore[misc]
 def delete(
 mem_id: str = typer.Argument(..., help="Memory ID to delete."),
 url: str = typer.Option(
@@ -206,7 +208,7 @@ show_default="env/localhost",
     asyncio.run(_run_delete())
 
 
-@app.command()
+@app.command() # type: ignore[misc]
 def import_json(
 file: Path = typer.Argument(
 ..., exists=True, readable=True, help="JSONL file (one memory per line)."
