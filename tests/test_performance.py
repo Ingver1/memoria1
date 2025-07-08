@@ -5,9 +5,9 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-import numpy as np
 import pytest
 
+import numpy as np
 import psutil
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.embedding import EnhancedEmbeddingService
