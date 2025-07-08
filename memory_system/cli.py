@@ -76,7 +76,7 @@ except ModuleNotFoundError:  # rich not installed -> degrade gracefully
             lines = [" | ".join(r) for r in self.rows]
             return "\n".join(head + lines)
 
-Panel = _Panel
+    Panel = _Panel
     Table = _Table
 else:
     Panel = RichPanel
@@ -94,7 +94,7 @@ help="Interact with an AI-memory- server via REST API.",
 )
 
 API_URL_ENV = "AI_MEM_API_URL"
-DEFAULT_API = "[http://localhost:8000](http://localhost:8000)"
+DEFAULT_API = "http://localhost:8000"
 
 # ---------------------------------------------------------------------------
 
