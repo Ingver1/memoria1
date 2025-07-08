@@ -35,8 +35,9 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Final, cast
 
-from cryptography.fernet import Fernet, InvalidToken
 from pydantic import BaseModel, SecretStr, ValidationInfo, field_validator
+
+from cryptography.fernet import Fernet, InvalidToken
 
 __all__ = [
     "CryptoContext",
