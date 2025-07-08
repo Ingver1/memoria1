@@ -4,6 +4,9 @@ Asynchronous SQLite-backed memory store with JSON1 metadata support and
 connection pooling via **aiosqlite**. Designed to be injected through a
 FastAPI lifespan context — no hidden singletons.
 """
+
+from __future__ import annotations
+
 # ────────────────────────── stdlib imports ──────────────────────────
 import asyncio
 import datetime as dt
