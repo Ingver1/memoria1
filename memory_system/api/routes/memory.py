@@ -44,7 +44,7 @@ async def create_memory(
     """Persist a single memory row and return the stored record."""
     try:
         embedding = await embedding_service.encode([payload.text])
-        now = datetime.now(UTC)
+        now = datetime.now(UTC).timestamp()
         mem = await store.add_memory(
             text=payload.text,
             role=payload.role,
@@ -132,7 +132,7 @@ async def create_memories_batch(
     try:
         texts = [m.text for m in memories]
         vectors = await embedding_service.encode(texts)
-        now = datetime.now(UTC)
+        now = datetime.now(UTC).timestamp()
         inserted: list[MemoryRead] = []
         for src, vec in zip(memories, vectors, strict=False):
             row = await store.add_memory(
