@@ -13,7 +13,7 @@ from starlette.responses import Response
 
 from memory_system.api.middleware import check_dependencies, session_tracker
 from memory_system.api.schemas import HealthResponse, StatsResponse
-from memory_system.config.settings import UnifiedSettings
+from memory_system.config.settings import UnifiedSettings, get_settings
 from memory_system.core.store import EnhancedMemoryStore
 from memory_system.utils.metrics import get_metrics_content_type, get_prometheus_metrics
 
@@ -25,22 +25,18 @@ router = APIRouter(tags=["Health & Monitoring"])
 
 async def _store() -> EnhancedMemoryStore:
     """Dependency to get the global EnhancedMemoryStore (async)."""
-    from memory_system.api.app import get_memory_store_instance
-
-    return await get_memory_store_instance()
-
+    return EnhancedMemoryStore(UnifiedSettings())
+    
 
 def _settings() -> UnifiedSettings:
     """Dependency to get current UnifiedSettings."""
-    from memory_system.api.app import get_settings_instance
-
-    return get_settings_instance()
+    return get_settings()
 
 
 # Root endpoint (basic service info)
 
 
-@router.get("/", summary="Service info")
+@router.get("/", summary="Service info") # type: ignore[misc]
 async def root() -> dict[str, Any]:
     """Root health endpoint providing service information."""
     return {
@@ -57,10 +53,10 @@ async def root() -> dict[str, Any]:
 # Full health check and liveness/readiness probes
 
 
-@router.get("/health", response_model=HealthResponse, summary="Full health check")
+@router.get("/health", response_model=HealthResponse, summary="Full health check") # type: ignore[misc]
 async def health_check(
-    memory_store: EnhancedMemoryStore = None,
-    settings: UnifiedSettings = None,
+    memory_store: EnhancedMemoryStore,
+    settings: UnifiedSettings,
 ) -> HealthResponse:
     """Perform an in-depth health check of the system (components and dependencies)."""
     try:
@@ -96,15 +92,15 @@ async def health_check(
         )
 
 
-@router.get("/health/live", summary="Liveness probe")
+@router.get("/health/live", summary="Liveness probe") # type: ignore[misc]
 async def liveness_probe() -> dict[str, str]:
     """Simple liveness probe endpoint (always returns alive if reachable)."""
     return {"status": "alive", "timestamp": datetime.now(UTC).isoformat()}
 
 
-@router.get("/health/ready", summary="Readiness probe")
+@router.get("/health/ready", summary="Readiness probe") # type: ignore[misc]
 async def readiness_probe(
-    memory_store: EnhancedMemoryStore = None,
+    memory_store: EnhancedMemoryStore,
 ) -> dict[str, Any]:
     """Readiness probe to check if the memory store is ready for requests."""
     component = await memory_store.get_health()
@@ -113,10 +109,10 @@ async def readiness_probe(
     raise HTTPException(status_code=503, detail=f"Service not ready: {component.message}")
 
 
-@router.get("/stats", response_model=StatsResponse, summary="System statistics")
+@router.get("/stats", response_model=StatsResponse, summary="System statistics") # type: ignore[misc]
 async def get_stats(
-    memory_store: EnhancedMemoryStore = None,
-    settings: UnifiedSettings = None,
+    memory_store: EnhancedMemoryStore,
+    settings: UnifiedSettings,
 ) -> StatsResponse:
     """Retrieve current system and memory store statistics."""
     stats = await memory_store.get_stats()
@@ -140,15 +136,15 @@ async def get_stats(
     )
 
 
-@router.get("/metrics", summary="Prometheus metrics")
-async def metrics_endpoint(settings: UnifiedSettings = None) -> Response:
+@router.get("/metrics", summary="Prometheus metrics") # type: ignore[misc]
+async def metrics_endpoint(settings: UnifiedSettings) -> Response:
     """Expose Prometheus metrics if enabled, otherwise 404."""
     if not settings.monitoring.enable_metrics:
         raise HTTPException(status_code=404, detail="Metrics disabled")
     return Response(content=get_prometheus_metrics(), media_type=get_metrics_content_type())
 
 
-@router.get("/version", summary="Version info")
+@router.get("/version", summary="Version info") # type: ignore[misc]
 async def get_version() -> dict[str, Any]:
     """Get version and environment details of the running service."""
     return {
