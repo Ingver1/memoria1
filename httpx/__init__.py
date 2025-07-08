@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from fastapi.testclient import TestClient
 
@@ -9,19 +9,23 @@ class Response:
 
     @property
     def status_code(self) -> int:
-        return self._resp.status_code
+        return cast(int, self._resp.status_code)
 
     def json(self) -> Any:
         return self._resp.json()
 
     @property
     def text(self) -> str:
-        return self._resp.text
+        return cast(str, self._resp.text)
 
     @property
     def headers(self) -> Any:
         return self._resp.headers
 
+    def raise_for_status(self) -> None:
+        if hasattr(self._resp, "raise_for_status"):
+            self._resp.raise_for_status()
+            
 class AsyncClient:
     def __init__(self, app: Any | None = None, base_url: str = "http://test", timeout: float | None = None) -> None:
         self._app = app
@@ -30,18 +34,30 @@ class AsyncClient:
         self._timeout = timeout
 
     async def __aenter__(self) -> "AsyncClient":
-        self._client = TestClient(self._app, base_url=self._base_url)
+        self._client = TestClient(cast(Any, self._app), base_url=self._base_url)
         self._client.__enter__()
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: Any | None,
+    ) -> None:
         if self._client:
             self._client.__exit__(exc_type, exc, tb)
 
     async def get(self, url: str, **kwargs: Any) -> Response:
+        assert self._client is not None
         resp = self._client.get(url, **kwargs)
         return Response(resp)
 
     async def post(self, url: str, **kwargs: Any) -> Response:
+        assert self._client is not None
         resp = self._client.post(url, **kwargs)
+        return Response(resp)
+
+    async def delete(self, url: str, **kwargs: Any) -> Response:
+        assert self._client is not None
+        resp = self._client.delete(url, **kwargs)
         return Response(resp)
