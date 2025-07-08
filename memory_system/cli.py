@@ -29,8 +29,8 @@ import typer
 
 try:
     from rich import print as rprint
-    from rich.panel import Panel as RichPanel
-    from rich.table import Table as RichTable
+    from rich.panel import Panel
+    from rich.table import Table
 except ModuleNotFoundError:  # rich not installed -> degrade gracefully
     from typing import IO
 
@@ -49,7 +49,7 @@ except ModuleNotFoundError:  # rich not installed -> degrade gracefully
             os.environ["AI_MEM_RICH_WARNING_SHOWN"] = "1"
         print(*objects, sep=sep, end=end, file=file, flush=flush)
 
-    class RichPanel:
+    class Panel:
         """Minimal shim so code stays import-safe without *rich*."""
 
         def __init__(self, renderable: str, **_: Any) -> None:  # noqa: D401
@@ -58,7 +58,7 @@ except ModuleNotFoundError:  # rich not installed -> degrade gracefully
         def __str__(self) -> str:  # noqa: D401
             return self.renderable
 
-    class RichTable:
+    class Table:
         """Plain ASCII table shim used when *rich* is missing."""
 
         def __init__(self, title: str | None = None, **_: Any) -> None:  # noqa: D401
@@ -76,8 +76,6 @@ except ModuleNotFoundError:  # rich not installed -> degrade gracefully
             lines = [" | ".join(r) for r in self.rows]
             return "\n".join(head + lines)
 
-Panel = RichPanel
-Table = RichTable
 # ---------------------------------------------------------------------------
 
 # Typer application
