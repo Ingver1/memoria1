@@ -27,12 +27,13 @@ import base64
 import json
 import logging
 import os
+import re
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, MutableMapping
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Final, cast
+from typing import Any, Final, cast
 
 from cryptography.fernet import Fernet, InvalidToken
 from pydantic import BaseModel, SecretStr, ValidationInfo, field_validator
@@ -41,6 +42,11 @@ __all__ = [
     "CryptoContext",
     "KeyManagementBackend",
     "LocalKeyBackend",
+    "PIIPatterns",
+    "EnhancedPIIFilter",
+    "SecureTokenManager",
+    "PasswordManager",
+    "EncryptionManager",
 ]
 
 _audit_logger = logging.getLogger("ai_memory.security.audit")
@@ -291,3 +297,209 @@ async def start_maintenance(ctx: CryptoContext, interval_hours: int = 6) -> None
             await asyncio.sleep(interval_hours * 3600)
 
     asyncio.create_task(_loop(), name="crypto_key_maintenance")
+
+# ---------------------------------------------------------------------------
+# Additional lightweight security helpers for tests
+# ---------------------------------------------------------------------------
+import hashlib
+import hmac
+import secrets
+import string
+import time
+from typing import Iterable, Pattern
+
+from .exceptions import SecurityError
+
+
+class PIIPatterns:
+    """Collection of regular expressions for common PII types."""
+
+    EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+    PHONE = re.compile(r"\+?\d?[\d\-\.\(\) ]{7,}\d")
+    CREDIT_CARD = re.compile(r"\b(?:\d[ -]*?){13,16}\b")
+    SSN = re.compile(r"\d{3}-\d{2}-\d{4}")
+    IP_ADDRESS = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+
+
+class EnhancedPIIFilter:
+    """Utility to detect and redact PII in text."""
+
+    def __init__(self, custom_patterns: dict[str, Pattern[str]] | None = None) -> None:
+        self.patterns: dict[str, Pattern[str]] = {
+            "email": PIIPatterns.EMAIL,
+            "phone": PIIPatterns.PHONE,
+            "credit_card": PIIPatterns.CREDIT_CARD,
+            "ssn": PIIPatterns.SSN,
+            "ip": PIIPatterns.IP_ADDRESS,
+        }
+        if custom_patterns:
+            self.patterns.update(custom_patterns)
+        self.stats: dict[str, int] = {key: 0 for key in self.patterns}
+
+    def detect(self, text: str) -> dict[str, list[str]]:
+        found: dict[str, list[str]] = {}
+        for key, pattern in self.patterns.items():
+            matches = pattern.findall(text)
+            if matches:
+                self.stats[key] = self.stats.get(key, 0) + len(matches)
+                found[key] = matches
+        return found
+
+    def redact(self, text: str) -> tuple[str, bool, list[str]]:
+        found = self.detect(text)
+        redacted = text
+        for key, matches in found.items():
+            placeholder = f"[{key.upper()}_REDACTED]"
+            for m in matches:
+                redacted = redacted.replace(m, placeholder)
+        return redacted, bool(found), list(found.keys())
+
+    def partial_redact(self, text: str, preserve_chars: int = 2) -> tuple[str, bool, list[str]]:
+        found = self.detect(text)
+        redacted = text
+        for _key, matches in found.items():
+            for m in matches:
+                keep_start = m[:preserve_chars]
+                keep_end = m[-preserve_chars:] if preserve_chars else ""
+                placeholder = f"{keep_start}...{keep_end}"
+                redacted = redacted.replace(m, placeholder)
+        return redacted, bool(found), list(found.keys())
+
+    def get_stats(self) -> dict[str, int]:
+        return dict(self.stats)
+
+    def reset_stats(self) -> None:
+        for k in self.stats:
+            self.stats[k] = 0
+
+
+class SecureTokenManager:
+    """Simplified JWT-like token manager using HMAC-SHA256."""
+
+    def __init__(self, secret_key: str, algorithm: str = "HS256", issuer: str = "unified-memory-system") -> None:
+        if len(secret_key) < 32:
+            raise SecurityError("Secret key must be at least 32 characters")
+        if algorithm != "HS256":
+            raise SecurityError("Algorithm not allowed")
+        self.secret_key = secret_key.encode()
+        self.algorithm = algorithm
+        self.issuer = issuer
+        self.revoked_tokens: set[str] = set()
+
+    def _sign(self, data: bytes) -> str:
+        sig = hmac.new(self.secret_key, data, hashlib.sha256).digest()
+        return base64.urlsafe_b64encode(sig).decode().rstrip("=")
+
+    def _encode(self, payload: dict[str, Any]) -> str:
+        header = base64.urlsafe_b64encode(b'{"alg":"HS256","typ":"JWT"}').decode().rstrip("=")
+        body = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+        signature = self._sign(f"{header}.{body}".encode())
+        return f"{header}.{body}.{signature}"
+
+    def _decode(self, token: str) -> tuple[dict[str, Any], dict[str, Any]]:
+        try:
+            header_b64, body_b64, signature = token.split(".")
+            data = f"{header_b64}.{body_b64}".encode()
+            if not hmac.compare_digest(self._sign(data), signature):
+                raise SecurityError("Invalid token")
+            payload = json.loads(base64.urlsafe_b64decode(body_b64 + "=="))
+            header = json.loads(base64.urlsafe_b64decode(header_b64 + "=="))
+            return header, payload
+        except Exception as exc:
+            raise SecurityError("Invalid token") from exc
+
+    def generate_token(self, user_id: str, *, expires_in: int = 3600, scopes: Iterable[str] | None = None, audience: str | None = None) -> str:
+        if not user_id or len(user_id) > 100:
+            raise SecurityError("Invalid user_id")
+        if not 0 < expires_in < 86400:
+            raise SecurityError("Invalid expiration time")
+        payload: dict[str, Any] = {
+            "sub": user_id,
+            "iss": self.issuer,
+            "iat": int(time.time()),
+            "exp": int(time.time()) + expires_in,
+        }
+        if scopes:
+            payload["scopes"] = list(scopes)
+        if audience:
+            payload["aud"] = audience
+        return self._encode(payload)
+
+    def generate_refresh_token(self, user_id: str) -> str:
+        return self.generate_token(user_id, audience="refresh", expires_in=3600 * 24 * 7)
+
+    def verify_token(self, token: str, *, audience: str | None = None) -> dict[str, Any]:
+        if token in self.revoked_tokens:
+            raise SecurityError("Token revoked")
+        _header, payload = self._decode(token)
+        now = int(time.time())
+        if payload.get("exp", 0) < now:
+            raise SecurityError("Token expired")
+        if audience is not None and payload.get("aud") != audience:
+            raise SecurityError("Invalid token")
+        return payload
+
+    def revoke_token(self, token: str) -> bool:
+        self.revoked_tokens.add(token)
+        return True
+
+    def get_stats(self) -> dict[str, Any]:
+        return {
+            "algorithm": self.algorithm,
+            "issuer": self.issuer,
+            "revoked_tokens_count": len(self.revoked_tokens),
+        }
+
+
+class PasswordManager:
+    """Helper for password hashing and verification."""
+
+    @staticmethod
+    def hash_password(password: str, salt: bytes | None = None) -> tuple[str, bytes]:
+        if len(password) < 8:
+            raise SecurityError("Password must be at least 8 characters")
+        salt = salt or secrets.token_bytes(16)
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
+        return base64.b64encode(dk).decode(), salt
+
+    @staticmethod
+    def verify_password(password: str, hashed: str, salt: bytes) -> bool:
+        try:
+            dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
+            return hmac.compare_digest(base64.b64decode(hashed.encode()), dk)
+        except Exception:
+            return False
+
+    @staticmethod
+    def generate_secure_password(*, length: int = 16, include_symbols: bool = True) -> str:
+        if not 8 <= length <= 128:
+            raise SecurityError("Length must be between 8 and 128")
+        chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
+        if include_symbols:
+            chars += "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        while True:
+            pwd = "".join(secrets.choice(chars) for _ in range(length))
+            if (
+                any(c.islower() for c in pwd)
+                and any(c.isupper() for c in pwd)
+                and any(c.isdigit() for c in pwd)
+                and (not include_symbols or any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in pwd))
+            ):
+                return pwd
+
+
+class EncryptionManager:
+    """Very small symmetric encryption helper using XOR and base64."""
+
+    def __init__(self, key: bytes | None = None) -> None:
+        self.key = key or secrets.token_bytes(32)
+
+    def encrypt(self, data: str) -> str:
+        raw = data.encode()
+        out = bytes(b ^ self.key[i % len(self.key)] for i, b in enumerate(raw))
+        return base64.urlsafe_b64encode(out).decode()
+
+    def decrypt(self, token: str) -> str:
+        data = base64.urlsafe_b64decode(token.encode())
+        out = bytes(b ^ self.key[i % len(self.key)] for i, b in enumerate(data))
+        return out.decode()
