@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 import faiss
+
 import numpy as _np
 
 _LOGGER = logging.getLogger(__name__)
