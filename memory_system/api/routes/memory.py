@@ -35,7 +35,7 @@ Settings = UnifiedSettings  # alias for brevity
 # ────────────────────────────────────────────────────────────────────────
 
 
-@router.post("/", response_model=MemoryRead, status_code=status.HTTP_201_CREATED) # type: ignore[misc]
+@router.post("/", response_model=MemoryRead, status_code=status.HTTP_201_CREATED)
 async def create_memory(
     payload: MemoryCreate,
     store: EnhancedMemoryStore,
