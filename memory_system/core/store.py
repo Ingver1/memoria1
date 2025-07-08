@@ -261,3 +261,11 @@ from memory_system.core.enhanced_store import (
     EnhancedMemoryStore,
     HealthComponent,
 )  # Ensure EnhancedMemoryStore & HealthComponent are accessible via core.store
+
+__all__ = [
+    "Memory",
+    "SQLiteMemoryStore",
+    "get_store",
+    "EnhancedMemoryStore",
+    "HealthComponent",
+]
