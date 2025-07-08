@@ -6,7 +6,6 @@ import functools
 import logging
 
 from fastapi import HTTPException, status
-
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.store import EnhancedMemoryStore
 
