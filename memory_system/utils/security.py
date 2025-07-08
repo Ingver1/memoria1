@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import Final, cast
 
 from cryptography.fernet import Fernet, InvalidToken
-from pydantic import BaseModel, FieldValidationInfo, SecretStr, field_validator
+from pydantic import BaseModel, ValidationInfo, SecretStr, field_validator
 
 __all__ = [
     "CryptoContext",
@@ -60,7 +60,7 @@ class KeyMetadata(BaseModel):
     @field_validator("expires_at")
     @classmethod
     def _exp_after_created(
-        cls, v: datetime | None, info: FieldValidationInfo
+        cls, v: datetime | None, info: ValidationInfo
     ) -> datetime | None:
         if v is not None and v <= info.data["created_at"]:
             raise ValueError("expires_at must be after created_at")
@@ -100,7 +100,11 @@ class LocalKeyBackend(KeyManagementBackend):
     """Simple JSON keyring stored on disk; suitable for dev or air‑gapped edge."""
 
     def __init__(self, path: str | Path | None = None) -> None:
-        self._path = Path(path or os.getenv("AI_MEMORY_KEYRING", ".keyring.json"))
+        default_path = os.getenv("AI_MEMORY_KEYRING", ".keyring.json")
+        if path is None:
+            self._path = Path(default_path)
+        else:
+            self._path = Path(path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
 
     # ---------------------------------------------------------------------
