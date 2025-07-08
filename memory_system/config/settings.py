@@ -12,7 +12,6 @@ from cryptography.fernet import Fernet, InvalidToken
 from pydantic import BaseModel, Field, PositiveInt, field_validator
 from pydantic_settings import BaseSettings
 
-
 __all__ = [
     "DatabaseConfig",
     "ModelConfig",
