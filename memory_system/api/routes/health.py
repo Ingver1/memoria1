@@ -36,7 +36,7 @@ def _settings() -> UnifiedSettings:
 # Root endpoint (basic service info)
 
 
-@router.get("/", summary="Service info") # type: ignore[misc]
+@router.get("/", summary="Service info")
 async def root() -> dict[str, Any]:
     """Root health endpoint providing service information."""
     return {
@@ -53,7 +53,7 @@ async def root() -> dict[str, Any]:
 # Full health check and liveness/readiness probes
 
 
-@router.get("/health", response_model=HealthResponse, summary="Full health check") # type: ignore[misc]
+@router.get("/health", response_model=HealthResponse, summary="Full health check")
 async def health_check(
     memory_store: EnhancedMemoryStore,
     settings: UnifiedSettings,
@@ -84,7 +84,7 @@ async def health_check(
         return HealthResponse(
             status="unhealthy",
             timestamp=datetime.now(UTC).isoformat(),
-            uptime_seconds=0.0,
+            uptime_seconds=0,
             version="0.8.0a0",
             checks={"health_check_error": False},
             memory_store_health={"error": str(e)},
@@ -92,13 +92,13 @@ async def health_check(
         )
 
 
-@router.get("/health/live", summary="Liveness probe") # type: ignore[misc]
+@router.get("/health/live", summary="Liveness probe")
 async def liveness_probe() -> dict[str, str]:
     """Simple liveness probe endpoint (always returns alive if reachable)."""
     return {"status": "alive", "timestamp": datetime.now(UTC).isoformat()}
 
 
-@router.get("/health/ready", summary="Readiness probe") # type: ignore[misc]
+@router.get("/health/ready", summary="Readiness probe")
 async def readiness_probe(
     memory_store: EnhancedMemoryStore,
 ) -> dict[str, Any]:
@@ -109,7 +109,7 @@ async def readiness_probe(
     raise HTTPException(status_code=503, detail=f"Service not ready: {component.message}")
 
 
-@router.get("/stats", response_model=StatsResponse, summary="System statistics") # type: ignore[misc]
+@router.get("/stats", response_model=StatsResponse, summary="System statistics")
 async def get_stats(
     memory_store: EnhancedMemoryStore,
     settings: UnifiedSettings,
@@ -136,7 +136,7 @@ async def get_stats(
     )
 
 
-@router.get("/metrics", summary="Prometheus metrics") # type: ignore[misc]
+@router.get("/metrics", summary="Prometheus metrics")
 async def metrics_endpoint(settings: UnifiedSettings) -> Response:
     """Expose Prometheus metrics if enabled, otherwise 404."""
     if not settings.monitoring.enable_metrics:
@@ -144,7 +144,7 @@ async def metrics_endpoint(settings: UnifiedSettings) -> Response:
     return Response(content=get_prometheus_metrics(), media_type=get_metrics_content_type())
 
 
-@router.get("/version", summary="Version info") # type: ignore[misc]
+@router.get("/version", summary="Version info")
 async def get_version() -> dict[str, Any]:
     """Get version and environment details of the running service."""
     return {
