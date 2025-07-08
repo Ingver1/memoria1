@@ -342,7 +342,7 @@ class EnhancedPIIFilter:
             matches = pattern.findall(text)
             if matches:
                 self.stats[key] = self.stats.get(key, 0) + len(matches)
-              found[key] = matches
+                found[key] = matches
         return found
 
     def redact(self, text: str) -> tuple[str, bool, list[str]]:
@@ -400,7 +400,7 @@ class SecureTokenManager:
         try:
             header_b64, body_b64, signature = token.split(".")
             data = f"{header_b64}.{body_b64}".encode()
-          if not hmac.compare_digest(self._sign(data), signature):
+            if not hmac.compare_digest(self._sign(data), signature):
                 raise SecurityError("Invalid token")
             payload = json.loads(base64.urlsafe_b64decode(body_b64 + "=="))
             header = json.loads(base64.urlsafe_b64decode(header_b64 + "=="))
@@ -430,7 +430,7 @@ class SecureTokenManager:
 
     def verify_token(self, token: str, *, audience: str | None = None) -> dict[str, Any]:
         if token in self.revoked_tokens:
-          raise SecurityError("Token revoked")
+            raise SecurityError("Token revoked")
         _header, payload = self._decode(token)
         now = int(time.time())
         if payload.get("exp", 0) < now:
@@ -466,7 +466,7 @@ class PasswordManager:
     def verify_password(password: str, hashed: str, salt: bytes) -> bool:
         try:
             dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
-          return hmac.compare_digest(base64.b64decode(hashed.encode()), dk)
+            return hmac.compare_digest(base64.b64decode(hashed.encode()), dk)
         except Exception:
             return False
 
