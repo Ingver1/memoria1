@@ -22,11 +22,11 @@ from dataclasses import dataclass
 from typing import cast
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from memory_system.config.settings import UnifiedSettings
 from memory_system.utils.cache import SmartCache
 from memory_system.utils.metrics import MET_ERRORS_TOTAL
+from sentence_transformers import SentenceTransformer
 
 __all__ = ["EmbeddingError", "EmbeddingJob", "EnhancedEmbeddingService"]
 
