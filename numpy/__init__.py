@@ -1,16 +1,17 @@
 import math
 import random as _random
-from typing import Iterable, List
+from typing import Any, Iterable, List, Sequence
 
 
-class ndarray(list):
+class ndarray(list[Any]):
     """Very small ndarray substitute supporting basic operations used in tests."""
 
-    def __init__(self, data):
+    def __init__(self, data: Iterable[Any] | Any) -> None:
         if isinstance(data, Iterable) and not isinstance(data, (str, bytes)):
             super().__init__(data)
         else:
             super().__init__([data])
+        self.shape: tuple[int, ...] = ()
         self._update_shape()
 
     def _update_shape(self) -> None:
@@ -22,6 +23,12 @@ class ndarray(list):
     @property
     def ndim(self) -> int:
         return len(self.shape)
+
+    @property
+    def size(self) -> int:
+        if self.ndim == 2:
+            return len(self) * len(self[0])
+        return len(self)
 
     def astype(self, dtype: Any, copy: bool = True) -> "ndarray":
         # dtype is ignored; return copy if requested
@@ -50,7 +57,7 @@ def asarray(obj: Sequence[Any], dtype: Any | None = None) -> "ndarray":
 def array(obj: Sequence[Any], dtype: Any | None = None) -> "ndarray":
     return ndarray(list(obj))
     
-def frombuffer(buffer: bytes, dtype=uint8):
+def frombuffer(buffer: bytes, dtype: type | int = uint8) -> "ndarray":
     return ndarray(list(buffer))
 
 def tile(arr: "ndarray", reps: int):
@@ -59,7 +66,7 @@ def tile(arr: "ndarray", reps: int):
         data.extend([row[:] if isinstance(row, list) else row for row in arr])
     return ndarray(data)
 
-def vstack(arrays: List["ndarray"]):
+def vstack(arrays: List["ndarray"]) -> "ndarray":
     data = []
     for arr in arrays:
         data.extend([row[:] if isinstance(row, list) else row for row in arr])
