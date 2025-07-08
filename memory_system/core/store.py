@@ -23,6 +23,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 # ─────────────────────── third-party imports ───────────────────────
 import aiosqlite
 
+if TYPE_CHECKING:  # pragma: no cover - optional FastAPI import for type hints
+    from fastapi import FastAPI, Request
+    
 logger = logging.getLogger(__name__)
 
 ###############################################################################
@@ -141,7 +144,7 @@ class SQLiteMemoryStore:
         await self.initialise()
         conn = await self._acquire()
         try:
-            row = await conn.execute_fetchone(
+            cursor = await conn.execute(
                 "SELECT * FROM memories WHERE id = ?", (memory_id,)
             )
             return self._row_to_memory(row) if row else None
