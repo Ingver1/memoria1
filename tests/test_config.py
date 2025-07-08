@@ -6,9 +6,9 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from cryptography.fernet import Fernet
 from pydantic import ValidationError
 
+from cryptography.fernet import Fernet
 from memory_system.config.settings import (
     APIConfig,
     DatabaseConfig,
