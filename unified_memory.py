@@ -26,13 +26,47 @@ import uuid
 
 # stdlib
 from collections.abc import MutableMapping, Sequence
-from typing import Any
 
 # local
-from memory_system.core.store import (
-    Memory,
-    MemoryStoreProtocol,  # structural: implemented by SQLiteMemoryStore & InMemoryStore
-)
+from dataclasses import dataclass
+from typing import Any, Protocol
+
+
+@dataclass(slots=True)
+class Memory:
+    """Simple memory record used by helper functions."""
+
+    memory_id: str
+    text: str
+    created_at: _dt.datetime
+    metadata: dict[str, Any] | None = None
+
+
+class MemoryStoreProtocol(Protocol):
+    """Minimal protocol expected from a memory store."""
+
+    async def add_memory(self, memory: Memory) -> None:
+        ...
+
+    async def search_memory(
+        self, *, query: str, k: int = 5, metadata_filter: MutableMapping[str, Any] | None = None
+    ) -> Sequence[Memory]:
+        ...
+
+    async def delete_memory(self, memory_id: str) -> None:
+        ...
+
+    async def update_memory(
+        self,
+        memory_id: str,
+        *,
+        text: str | None = None,
+        metadata: MutableMapping[str, Any] | None = None,
+    ) -> Memory:
+        ...
+
+    async def list_recent(self, *, n: int = 20) -> Sequence[Memory]:
+        ...
 
 logger = logging.getLogger("memory_system.unified_memory")
 
@@ -105,7 +139,7 @@ async def add(
     memory = Memory(
         memory_id=str(uuid.uuid4()),
         text=text,
-        metadata=metadata or {},
+        metadata=dict(metadata) if metadata else {},
         created_at=_dt.datetime.utcnow(),
     )
 
@@ -182,3 +216,16 @@ async def list_recent(
     recent = await asyncio.wait_for(st.list_recent(n=n), timeout=ASYNC_TIMEOUT)
     logger.debug("Fetched %d recent memories.", len(recent))
     return recent
+
+
+__all__ = [
+    "Memory",
+    "MemoryStoreProtocol",
+    "add",
+    "search",
+    "delete",
+    "update",
+    "list_recent",
+    "set_default_store",
+    "get_default_store",
+]
