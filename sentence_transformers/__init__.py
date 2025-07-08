@@ -13,10 +13,11 @@ class SentenceTransformer:
     def get_sentence_embedding_dimension(self) -> int:
         return self._dim
 
-    def encode(self, texts):
+    def encode(self, texts: str | list[str]) -> np.ndarray:
+        """Return deterministic embeddings for *texts*."""
         if isinstance(texts, str):
             texts = [texts]
-        vectors = []
+        vectors: list[np.ndarray] = []
         for text in texts:
             h = hashlib.sha256(text.encode()).digest()
             arr = np.frombuffer(h, dtype=np.uint8).astype(np.float32)
