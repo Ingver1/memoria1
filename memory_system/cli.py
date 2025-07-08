@@ -31,6 +31,7 @@ try:
     from rich import print as rprint
     from rich.panel import Panel as RichPanel
     from rich.table import Table as RichTable
+    
     Panel = RichPanel
     Table = RichTable
 except ModuleNotFoundError:  # rich not installed -> degrade gracefully
