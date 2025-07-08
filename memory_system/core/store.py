@@ -34,21 +34,32 @@ logger = logging.getLogger(__name__)
 
 @dataclass(slots=True, frozen=True)
 class Memory:
-    """A single memory entry."""
+    """A single memory entry with optional emotional context."""
 
     id: str
     text: str
     created_at: dt.datetime
     importance: float = 0.0  # 0..1
+    valence: float = 0.0  # -1..1 emotional polarity
+    emotional_intensity: float = 0.0  # 0..1 strength of emotion
     metadata: Dict[str, Any] | None = None
 
     @staticmethod
-    def new(text: str, *, importance: float = 0.0, metadata: Optional[Dict[str, Any]] = None) -> "Memory":
+    def new(
+        text: str,
+        *,
+        importance: float = 0.0,
+        valence: float = 0.0,
+        emotional_intensity: float = 0.0,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> "Memory":
         return Memory(
             id=str(uuid.uuid4()),
             text=text,
             created_at=dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc),
             importance=importance,
+            valence=valence,
+            emotional_intensity=emotional_intensity,
             metadata=metadata or {},
         )
 
@@ -65,6 +76,8 @@ class SQLiteMemoryStore:
         text        TEXT NOT NULL,
         created_at  TEXT NOT NULL,
         importance  REAL DEFAULT 0,
+        valence     REAL DEFAULT 0,
+        emotional_intensity REAL DEFAULT 0,
         metadata    JSON
     );
     """
@@ -127,12 +140,15 @@ class SQLiteMemoryStore:
         conn = await self._acquire()
         try:
             await conn.execute(
-                "INSERT INTO memories (id, text, created_at, importance, metadata) VALUES (?, ?, ?, ?, json(?))",
+                "INSERT INTO memories (id, text, created_at, importance, valence, emotional_intensity, metadata)"
+                " VALUES (?, ?, ?, ?, ?, ?, json(?))",
                 (
                     mem.id,
                     mem.text,
                     mem.created_at.isoformat(),
                     mem.importance,
+                    mem.valence,
+                    mem.emotional_intensity,
                     json.dumps(mem.metadata) if mem.metadata else "null",
                 ),
             )
@@ -170,6 +186,8 @@ class SQLiteMemoryStore:
             text=row["text"],
             created_at=dt.datetime.fromisoformat(row["created_at"]),
             importance=row["importance"],
+            valence=row["valence"],
+            emotional_intensity=row["emotional_intensity"],
             metadata=metadata,
         )
 
@@ -200,7 +218,9 @@ class SQLiteMemoryStore:
                     params.extend([f"$.{key}", val])
 
             # construct final SQL
-            sql = "SELECT id, text, created_at, importance, metadata FROM memories"
+            sql = (
+                "SELECT id, text, created_at, importance, valence, emotional_intensity, metadata FROM memories"
+            )
             if clauses:
                 sql += " WHERE " + " AND ".join(clauses)
             sql += " ORDER BY created_at DESC LIMIT ?"
