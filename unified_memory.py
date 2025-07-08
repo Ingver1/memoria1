@@ -13,7 +13,7 @@ Notes
   ``delete_memory`` and ``update_metadata``.  If not supplied the helper
   tries to obtain the application‑scoped store via
   :pyfunc:`memory_system.core.store.get_memory_store`.
-* Docstrings follow **PEP 257** and type hints are 100 % complete so that
+* Docstrings follow **PEP 257** and type hints are 100 % complete so that
   MyPy / Ruff‑strict pass cleanly.
 """
 
@@ -91,7 +91,7 @@ async def add(
     """Persist a *text* record with optional *metadata* and return a **Memory**.
 
     Parameters
-    ----------
+        ----------
     text:
         Raw textual content of the memory.
     metadata:
