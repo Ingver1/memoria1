@@ -27,7 +27,7 @@ def get_memory_store() -> EnhancedMemoryStore:
     return EnhancedMemoryStore(get_settings())  # Note: runs in sync for simplicity
 
 
-def require_api_enabled(settings: UnifiedSettings = None) -> None:
+def require_api_enabled(settings: UnifiedSettings | None = None) -> None:
     """FastAPI dependency that raises an HTTP 503 if the API is disabled in settings."""
     if not settings.api.enable_api:
         log.warning("API is disabled by configuration — blocking request.")
