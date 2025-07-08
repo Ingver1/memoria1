@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> object:
     if name == "EnhancedMemoryStore":
         from memory_system.core.store import EnhancedMemoryStore
 
