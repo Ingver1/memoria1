@@ -238,6 +238,15 @@ def configure_logging(settings: UnifiedSettings) -> None:
     with cfg_path.open("r", encoding="utf-8") as fp:
         logging_cfg = yaml.safe_load(fp)
 
+    # If python-json-logger is not installed, fall back to the standard
+    # logging formatter so tests can run without the optional dependency.
+    try:
+        import pythonjsonlogger.jsonlogger  # noqa: F401
+    except ModuleNotFoundError:
+        json_formatter = logging_cfg.get("formatters", {}).get("json")
+        if isinstance(json_formatter, dict):
+            json_formatter.pop("()", None)
+            
     if os.getenv("LOG_JSON") == "1":
         logging_cfg["root"]["handlers"] = ["json_console"]
 
