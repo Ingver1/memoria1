@@ -4,10 +4,10 @@ import asyncio
 import time
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 import httpx
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from memory_system.api.app import create_app
 from memory_system.api.schemas import (
     ErrorResponse,
