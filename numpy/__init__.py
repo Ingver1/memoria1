@@ -47,7 +47,7 @@ class ndarray(list[Any]):
             return ndarray([flat])
         raise NotImplementedError
 
-def __truediv__(self, other: float) -> "ndarray":
+    def __truediv__(self, other: float) -> "ndarray":
         return ndarray([x / other for x in self])
 
 float32 = float
