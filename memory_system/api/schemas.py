@@ -36,12 +36,12 @@ class MemoryCreate(MemoryBase):
     )
 
 
-class MemoryUpdate(MemoryBase):
-    """Partial update — all fields optional but at least one is required."""
+class MemoryUpdate(BaseModel):
+    """Payload for partial updates where all fields are optional."""
 
-    text: str | None = None
-    role: str | None = None
-    tags: list[str] | None = None
+    text: str | None = Field(default=None, min_length=1, max_length=10_000)
+    role: str | None = Field(default=None, max_length=32)
+    tags: list[str] | None = Field(default=None, max_length=10)
 
     model_config = {
         "extra": "forbid",
