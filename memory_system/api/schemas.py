@@ -26,6 +26,13 @@ class MemoryBase(BaseModel):
     text: str = Field(..., min_length=1, max_length=10_000)
     role: str = Field("user", max_length=32, description="Conversation role label")
     tags: list[str] = Field(default_factory=list, max_length=10)
+    valence: float = Field(0.0, ge=-1.0, le=1.0, description="Emotion polarity")
+    emotional_intensity: float = Field(
+        0.0,
+        ge=0.0,
+        le=1.0,
+        description="Strength of emotional reaction",
+    )
 
 
 class MemoryCreate(MemoryBase):
@@ -42,7 +49,9 @@ class MemoryUpdate(BaseModel):
     text: str | None = Field(default=None, min_length=1, max_length=10_000)
     role: str | None = Field(default=None, max_length=32)
     tags: list[str] | None = Field(default=None, max_length=10)
-
+    valence: float | None = Field(default=None, ge=-1.0, le=1.0)
+    emotional_intensity: float | None = Field(default=None, ge=0.0, le=1.0)
+    
     model_config = {
         "extra": "forbid",
         "validate_default": True,
@@ -56,6 +65,8 @@ class MemoryRead(MemoryBase):
     user_id: str
     created_at: datetime
     updated_at: datetime
+    valence: float = Field(0.0, ge=-1.0, le=1.0)
+    emotional_intensity: float = Field(0.0, ge=0.0, le=1.0)
 
 
 # ---------------------------------------------------------------------------
