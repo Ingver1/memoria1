@@ -1,7 +1,5 @@
-"""Shim module importing high-level memory helpers for backward compatibility."""
+"""Compatibility wrapper exposing high-level memory helper functions."""
 from __future__ import annotations
-
-from typing import Any, MutableMapping, Sequence
 
 import unified_memory as _u
 
