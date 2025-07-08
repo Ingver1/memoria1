@@ -24,10 +24,7 @@ import typer
 Panel: Type[Any]
 Table: Type[Any]
 
-# ------------Panel: Type[Any]
-Table: Type[Any]
-
-#----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 # Optional rich import (colourful tables & pretty JSON)
 
