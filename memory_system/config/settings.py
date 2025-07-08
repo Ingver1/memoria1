@@ -241,10 +241,10 @@ def configure_logging(settings: UnifiedSettings) -> None:
     if os.getenv("LOG_JSON") == "1":
         logging_cfg["root"]["handlers"] = ["json_console"]
 
-        logging.config.dictConfig(logging_cfg)
+    logging.config.dictConfig(logging_cfg)
 
 
-        _settings: UnifiedSettings | None = None
+_settings: UnifiedSettings | None = None
 
 
 def get_settings() -> UnifiedSettings:
@@ -252,3 +252,4 @@ def get_settings() -> UnifiedSettings:
     global _settings
     if _settings is None:
         _settings = UnifiedSettings()
+    return _settings
