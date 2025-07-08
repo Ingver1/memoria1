@@ -64,7 +64,7 @@ async def create_memory(
 # ────────────────────────────────────────────────────────────────────────
 
 
-@router.post("/search", response_model=list[MemorySearchResult]) # type: ignore[misc]
+@router.post("/search", response_model=list[MemorySearchResult])
 async def search_memories(
     query: MemoryQuery,
     store: EnhancedMemoryStore,
@@ -97,7 +97,7 @@ async def search_memories(
 # ────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/", response_model=list[MemoryRead]) # type: ignore[misc]
+@router.get("/", response_model=list[MemoryRead])
 async def list_memories(
     request: Request,
     user_id: str | None = Query(None, description="User ID filter"),
@@ -120,7 +120,7 @@ async def list_memories(
 # ────────────────────────────────────────────────────────────────────────
 
 
-@router.post("/batch", response_model=list[MemoryRead]) # type: ignore[misc]
+@router.post("/batch", response_model=list[MemoryRead])
 async def create_memories_batch(
     memories: list[MemoryCreate],
     store: EnhancedMemoryStore,
@@ -158,7 +158,7 @@ async def create_memories_batch(
 # ────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/stats", response_model=dict[str, int]) # type: ignore[misc]
+@router.get("/stats", response_model=dict[str, int])
 async def get_memory_stats(
     store: EnhancedMemoryStore,
     user_id: str | None = None,
