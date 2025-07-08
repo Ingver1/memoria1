@@ -33,15 +33,15 @@ router = APIRouter(tags=["Memory"], prefix="/memory")
 async def add_memory(request: Request, body: dict[str, Any]) -> dict[str, str]:
     """Add a new piece of memory."""
     store: SQLiteMemoryStore = get_memory_store(request)
-    uid = await add(body["text"], metadata=body.get("metadata", {}), store=store)
-    return {"id": uid}
+    mem = await add(body["text"], metadata=body.get("metadata", {}), store=store)
+    return {"id": mem.memory_id}
 
 
 @router.get("/search", summary="Search memory", response_description="Search results")
 async def search_memory(request: Request, q: str, limit: int = 5) -> Any:
     """Semantic search across stored memories."""
     store: SQLiteMemoryStore = get_memory_store(request)
-    return await search(q, limit=limit, store=store)
+    return await search(q, k=limit, store=store)
 
 
 # ---------------------------------------------------------------------------
