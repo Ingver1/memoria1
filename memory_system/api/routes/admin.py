@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from fastapi import APIRouter, status
 from starlette.types import ASGIApp
-
-from typing import cast
 
 from memory_system.api.middleware import MaintenanceModeMiddleware
 
