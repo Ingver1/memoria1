@@ -15,13 +15,19 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, Optional, Type, cast
 
 # ────────────────────────────── third-party imports ────────────────────────────
 import httpx
 import typer
 
-# ---------------------------------------------------------------------------
+Panel: Type[Any]
+Table: Type[Any]
+
+# ------------Panel: Type[Any]
+Table: Type[Any]
+
+#----------------------------------------------------------------------------
 
 # Optional rich import (colourful tables & pretty JSON)
 
