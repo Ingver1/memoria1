@@ -24,10 +24,9 @@ class SentenceTransformer:
             # repeat or truncate to self._dim
             if arr.size < self._dim:
                 reps = (self._dim + arr.size - 1) // arr.size
-                arr = np.tile(arr, reps)
-                arr = np.array(list(arr)[: self._dim])
+                arr = np.array(np.tile(arr, reps)[: self._dim])
             else:
-                arr = np.array(list(arr)[: self._dim])
+                arr = np.array(arr[: self._dim])
             if np.linalg.norm(arr) != 0:
                 arr = arr / np.linalg.norm(arr)
             vectors.append(arr)
