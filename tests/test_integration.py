@@ -6,10 +6,10 @@ import tempfile
 import time
 from pathlib import Path
 
-import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+import httpx
 from memory_system.api.app import create_app
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.embedding import EnhancedEmbeddingService
