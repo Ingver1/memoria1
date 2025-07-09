@@ -11,6 +11,7 @@ search = _u.search
 delete = _u.delete
 update = _u.update
 list_recent = _u.list_recent
+list_best = _u.list_best
 set_default_store = _u.set_default_store
 get_default_store = _u.get_default_store
 
@@ -22,6 +23,7 @@ __all__ = [
     "delete",
     "update",
     "list_recent",
+    "list_best",
     "set_default_store",
     "get_default_store",
 ]
