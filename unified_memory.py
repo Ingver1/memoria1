@@ -276,6 +276,22 @@ async def list_recent(
     return recent
 
 
+async def list_best(
+    n: int = 5,
+    *,
+    store: MemoryStoreProtocol | None = None,
+) -> Sequence[Memory]:
+    """Return *n* most important memories ranked by score."""
+    st = await _resolve_store(store)
+    candidates = await asyncio.wait_for(st.list_recent(n=max(n * 5, 20)), timeout=ASYNC_TIMEOUT)
+    scored = sorted(
+        candidates,
+        key=lambda m: (m.importance + m.emotional_intensity + abs(m.valence)),
+        reverse=True,
+    )
+    return scored[:n]
+  
+
 __all__ = [
     "Memory",
     "MemoryStoreProtocol",
@@ -286,6 +302,7 @@ __all__ = [
     "reinforce",
     "push_working_memory",
     "get_working_memory",
+    "list_best",
     "list_recent",
     "set_default_store",
     "get_default_store",
