@@ -246,7 +246,7 @@ class SQLiteMemoryStore:
         finally:
             await self._release(conn)
 
-async def list_recent(self, *, n: int = 20) -> List[Memory]:
+    async def list_recent(self, *, n: int = 20) -> List[Memory]:
         """Return the most recent *n* memories."""
         await self.initialise()
         conn = await self._acquire()
