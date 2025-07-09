@@ -7,8 +7,9 @@ import logging
 from datetime import UTC, datetime
 from typing import cast
 
-# ────────────────────────────── third-party ──────────────────────────────
-from fastapi import APIRouter, HTTPException, Query, Request, status
+# ────────────────────────────── third-party ──────────────────────────────from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from memory_system.api.dependencies import get_pii_filter
 
 # ──────────────────────────────── local ────────────────────────────────
 from memory_system.api.schemas import (
@@ -20,12 +21,14 @@ from memory_system.api.schemas import (
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.embedding import EnhancedEmbeddingService
 from memory_system.core.store import EnhancedMemoryStore
+from memory_system.memory_helpers import list_best
 from memory_system.utils.exceptions import (
     EmbeddingError,
     MemorySystemError,
     StorageError,
     ValidationError,
 )
+from memory_system.utils.security import EnhancedPIIFilter
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["Memory Management"])
@@ -40,13 +43,15 @@ async def create_memory(
     payload: MemoryCreate,
     store: EnhancedMemoryStore,
     embedding_service: EnhancedEmbeddingService,
+    pii_filter: EnhancedPIIFilter = Depends(get_pii_filter),
 ) -> MemoryRead:
     """Persist a single memory row and return the stored record."""
     try:
-        embedding = await embedding_service.encode([payload.text])
+        clean_text, _found, _types = pii_filter.redact(payload.text)
+        embedding = await embedding_service.encode([clean_text])
         now = datetime.now(UTC).timestamp()
         mem = await store.add_memory(
-            text=payload.text,
+            text=clean_text,,
             role=payload.role,
             tags=payload.tags,
             importance=0.0,
@@ -127,18 +132,19 @@ async def create_memories_batch(
     memories: list[MemoryCreate],
     store: EnhancedMemoryStore,
     embedding_service: EnhancedEmbeddingService,
+    pii_filter: EnhancedPIIFilter = Depends(get_pii_filter),
 ) -> list[MemoryRead]:
     """Create multiple memories in one call (limit 100)."""
     if len(memories) > 100:
         raise ValidationError("Batch size cannot exceed 100 memories")
     try:
-        texts = [m.text for m in memories]
-        vectors = await embedding_service.encode(texts)
+        clean_texts = [pii_filter.redact(m.text)[0] for m in memories]
+        vectors = await embedding_service.encode(clean_texts)
         now = datetime.now(UTC).timestamp()
         inserted: list[MemoryRead] = []
-        for src, vec in zip(memories, vectors, strict=False):
+        for src, vec, clean in zip(memories, vectors, clean_texts, strict=False):
             row = await store.add_memory(
-                text=src.text,
+                text=clean,
                 role=src.role,
                 tags=src.tags,
                 importance=0.0,
@@ -157,6 +163,19 @@ async def create_memories_batch(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to import batch memories",
         ) from e
+
+
+# ────────────────────────────────────────────────────────────────────────
+
+
+@router.get("/best", response_model=list[MemoryRead])
+async def get_best_memories(
+    store: EnhancedMemoryStore,
+    limit: int = Query(5, ge=1, le=50),
+) -> list[MemoryRead]:
+    """Return top memories ranked by importance and emotion."""
+    records = await list_best(limit, store=store)
+    return [MemoryRead.model_validate(r) for r in records]
 
 
 # ────────────────────────────────────────────────────────────────────────
