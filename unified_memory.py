@@ -25,6 +25,7 @@ import logging
 import uuid
 
 # stdlib
+from collections import deque
 from collections.abc import MutableMapping, Sequence
 
 # local
@@ -41,6 +42,11 @@ class Memory:
     created_at: _dt.datetime
     valence: float = 0.0
     emotional_intensity: float = 0.0
+    arousal: float = 0.0
+    importance: float = 0.0
+    episode_id: str | None = None
+    modality: str = "text"
+    connections: dict[str, float] | None = None
     metadata: dict[str, Any] | None = None
 
 
@@ -81,6 +87,25 @@ ASYNC_TIMEOUT = 5  # seconds – safety net for accidental long‑running operat
 
 # Process-wide default store used when no explicit store is provided.
 _DEFAULT_STORE: MemoryStoreProtocol | None = None
+
+# ---------------------------------------------------------------------------
+# Working memory helpers
+# ---------------------------------------------------------------------------
+
+WORKING_MEMORY_CAPACITY = 9
+_working_memory: deque[Memory] = deque(maxlen=WORKING_MEMORY_CAPACITY)
+
+
+def push_working_memory(memory: Memory) -> None:
+    """Add *memory* to the working memory buffer."""
+
+    _working_memory.append(memory)
+
+
+def get_working_memory() -> Sequence[Memory]:
+    """Return the current working memory contents in order of insertion."""
+
+    return list(_working_memory)
 
 
 def set_default_store(store: MemoryStoreProtocol) -> None:
@@ -123,6 +148,11 @@ async def add(
     *,
     valence: float = 0.0,
     emotional_intensity: float = 0.0,
+    arousal: float = 0.0,
+    importance: float = 0.0,
+    episode_id: str | None = None,
+    modality: str = "text",
+    connections: MutableMapping[str, float] | None = None,
     metadata: MutableMapping[str, Any] | None = None,
     store: MemoryStoreProtocol | None = None,
 ) -> Memory:
@@ -145,6 +175,11 @@ async def add(
         text=text,
         valence=valence,
         emotional_intensity=emotional_intensity,
+        arousal=arousal,
+        importance=importance,
+        episode_id=episode_id,
+        modality=modality,
+        connections=dict(connections) if connections else None,
         metadata=dict(metadata) if metadata else {},
         created_at=_dt.datetime.utcnow(),
     )
@@ -212,6 +247,23 @@ async def update(
     return updated
 
 
+async def reinforce(
+    memory_id: str,
+    amount: float = 0.1,
+    *,
+    store: MemoryStoreProtocol | None = None,
+) -> Memory:
+    """Reinforce the importance of a memory by *amount* and return the updated object."""
+
+    st = await _resolve_store(store)
+    meta = {"importance_delta": amount, "last_accessed": _dt.datetime.utcnow().isoformat()}
+    updated = await asyncio.wait_for(
+        st.update_memory(memory_id, metadata=meta), timeout=ASYNC_TIMEOUT
+    )
+    logger.debug("Memory %s reinforced by %.2f.", memory_id, amount)
+    return updated
+
+
 async def list_recent(
     n: int = 20,
     *,
@@ -231,6 +283,9 @@ __all__ = [
     "search",
     "delete",
     "update",
+    "reinforce",
+    "push_working_memory",
+    "get_working_memory",
     "list_recent",
     "set_default_store",
     "get_default_store",
