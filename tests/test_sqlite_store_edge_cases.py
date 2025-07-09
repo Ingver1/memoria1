@@ -1,6 +1,7 @@
 import asyncio
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from memory_system.core.store import Memory, SQLiteMemoryStore
 
