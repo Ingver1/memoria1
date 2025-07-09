@@ -8,6 +8,7 @@ __all__ = [
     "Request",
     "HTTPException",
     "Query",
+    "Depends",
     "status",
 ]
 
@@ -67,6 +68,11 @@ class HTTPException(Exception):
 
 def Query(default: Any = None, **_: Any) -> Any:
     return default
+
+
+class Depends:
+    def __init__(self, dependency: Callable[..., Any]) -> None:
+        self.dependency = dependency
 
 
 class _Status:
