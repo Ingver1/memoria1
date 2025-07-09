@@ -5,9 +5,9 @@ from __future__ import annotations
 # ─────────────────────────────── stdlib ────────────────────────────────
 import logging
 from datetime import UTC, datetime
-from typing import cast
+from typing import Annotated, cast
 
-# ────────────────────────────── third-party ──────────────────────────────from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+# ────────────────────────────── third-party ─────────────────────────────
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from memory_system.api.dependencies import get_pii_filter
 
@@ -21,7 +21,7 @@ from memory_system.api.schemas import (
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.embedding import EnhancedEmbeddingService
 from memory_system.core.store import EnhancedMemoryStore
-from memory_system.memory_helpers import list_best
+from memory_system.memory_helpers import MemoryStoreProtocol, list_best
 from memory_system.utils.exceptions import (
     EmbeddingError,
     MemorySystemError,
@@ -43,7 +43,7 @@ async def create_memory(
     payload: MemoryCreate,
     store: EnhancedMemoryStore,
     embedding_service: EnhancedEmbeddingService,
-    pii_filter: EnhancedPIIFilter = Depends(get_pii_filter),
+    pii_filter: Annotated[EnhancedPIIFilter, Depends(get_pii_filter)],
 ) -> MemoryRead:
     """Persist a single memory row and return the stored record."""
     try:
@@ -132,7 +132,7 @@ async def create_memories_batch(
     memories: list[MemoryCreate],
     store: EnhancedMemoryStore,
     embedding_service: EnhancedEmbeddingService,
-    pii_filter: EnhancedPIIFilter = Depends(get_pii_filter),
+    pii_filter: Annotated[EnhancedPIIFilter, Depends(get_pii_filter)],
 ) -> list[MemoryRead]:
     """Create multiple memories in one call (limit 100)."""
     if len(memories) > 100:
@@ -174,7 +174,7 @@ async def get_best_memories(
     limit: int = Query(5, ge=1, le=50),
 ) -> list[MemoryRead]:
     """Return top memories ranked by importance and emotion."""
-    records = await list_best(limit, store=store)
+    records = await list_best(limit, store=cast(MemoryStoreProtocol, store))
     return [MemoryRead.model_validate(r) for r in records]
 
 
