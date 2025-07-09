@@ -39,6 +39,8 @@ class Memory:
     memory_id: str
     text: str
     created_at: _dt.datetime
+    valence: float = 0.0
+    emotional_intensity: float = 0.0
     metadata: dict[str, Any] | None = None
 
 
@@ -118,6 +120,9 @@ async def _resolve_store(
 
 async def add(
     text: str,
+    *,
+    valence: float = 0.0,
+    emotional_intensity: float = 0.0,
     metadata: MutableMapping[str, Any] | None = None,
     *,
     store: MemoryStoreProtocol | None = None,
@@ -139,6 +144,8 @@ async def add(
     memory = Memory(
         memory_id=str(uuid.uuid4()),
         text=text,
+        valence=valence,
+        emotional_intensity=emotional_intensity,
         metadata=dict(metadata) if metadata else {},
         created_at=_dt.datetime.utcnow(),
     )
