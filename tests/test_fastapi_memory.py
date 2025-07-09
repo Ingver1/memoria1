@@ -34,3 +34,28 @@ def test_add_get_search_cycle(app):
 
         bad = client.post("/api/v1/memory/", json={"text": ""})
         assert bad.status_code == 422
+
+
+def test_pii_redaction(app):
+    with TestClient(app) as client:
+        payload = {"text": "Email me at user@example.com"}
+        resp = client.post("/api/v1/memory/", json=payload)
+        assert resp.status_code == 201
+
+        mem_id = resp.json()["id"]
+        resp = client.get("/api/v1/memory", params={"user_id": None})
+        assert resp.status_code == 200
+        stored = next((m for m in resp.json() if m["id"] == mem_id), None)
+        assert stored is not None
+        assert "user@example.com" not in stored["text"]
+
+
+def test_best_memories_endpoint(app):
+    with TestClient(app) as client:
+        for i in range(3):
+            payload = {"text": f"mem {i}"}
+            client.post("/api/v1/memory/", json=payload)
+
+        resp = client.get("/api/v1/memory/best", params={"limit": 2})
+        assert resp.status_code == 200
+        assert len(resp.json()) == 2
