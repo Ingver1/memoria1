@@ -51,7 +51,7 @@ async def create_memory(
         embedding = await embedding_service.encode([clean_text])
         now = datetime.now(UTC).timestamp()
         mem = await store.add_memory(
-            text=clean_text,,
+            text=clean_text,
             role=payload.role,
             tags=payload.tags,
             importance=0.0,
