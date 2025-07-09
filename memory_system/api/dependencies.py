@@ -8,8 +8,14 @@ import logging
 from fastapi import HTTPException, status
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.store import EnhancedMemoryStore
+from memory_system.utils.security import EnhancedPIIFilter
 
-__all__ = ["get_settings", "get_memory_store", "require_api_enabled"]
+__all__ = [
+    "get_settings",
+    "get_memory_store",
+    "get_pii_filter",
+    "require_api_enabled",
+]
 
 log = logging.getLogger("ums.dependencies")
 
@@ -24,6 +30,12 @@ def get_settings() -> UnifiedSettings:
 def get_memory_store() -> EnhancedMemoryStore:
     """Provide a cached EnhancedMemoryStore instance (singleton)."""
     return EnhancedMemoryStore(get_settings())  # Note: runs in sync for simplicity
+
+
+@functools.lru_cache
+def get_pii_filter() -> EnhancedPIIFilter:
+    """Provide a cached PII filter instance."""
+    return EnhancedPIIFilter()
 
 
 def require_api_enabled(settings: UnifiedSettings | None = None) -> None:
