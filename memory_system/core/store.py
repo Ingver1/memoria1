@@ -95,6 +95,7 @@ class SQLiteMemoryStore:
         self._pool: asyncio.LifoQueue[aiosqlite.Connection] = asyncio.LifoQueue(maxsize=pool_size)
         self._initialised: bool = False
         self._lock = asyncio.Lock()  # protects initialisation & pool resize
+        self._created = 0  # number of currently open connections
 
     # ---------------------------------------------------------------------
     # Low‑level connection helpers
@@ -103,18 +104,22 @@ class SQLiteMemoryStore:
         try:
             return self._pool.get_nowait()
         except asyncio.QueueEmpty:
-            conn = await aiosqlite.connect(self._dsn, uri=True, timeout=30)
-            await conn.execute("PRAGMA journal_mode=WAL")
-            await conn.execute("PRAGMA foreign_keys=ON")
-            await conn.execute("PRAGMA synchronous=NORMAL")
-            conn.row_factory = aiosqlite.Row
-            return conn
+            if self._created < self._pool_size:
+                conn = await aiosqlite.connect(self._dsn, uri=True, timeout=30)
+                await conn.execute("PRAGMA journal_mode=WAL")
+                await conn.execute("PRAGMA foreign_keys=ON")
+                await conn.execute("PRAGMA synchronous=NORMAL")
+                conn.row_factory = aiosqlite.Row
+                self._created += 1
+                return conn
+            return await self._pool.get()
 
     async def _release(self, conn: aiosqlite.Connection) -> None:
         try:
             self._pool.put_nowait(conn)
         except asyncio.QueueFull:
             await conn.close()
+            self._created -= 1
 
     # ------------------------------------------------------------------
     # Public lifecycle
@@ -140,6 +145,7 @@ class SQLiteMemoryStore:
         while not self._pool.empty():
             conn = await self._pool.get()
             await conn.close()
+            self._created = 0
 
    # -------------------------------------
     async def add(self, mem: Memory) -> None:
@@ -240,6 +246,21 @@ class SQLiteMemoryStore:
         finally:
             await self._release(conn)
 
+async def list_recent(self, *, n: int = 20) -> List[Memory]:
+        """Return the most recent *n* memories."""
+        await self.initialise()
+        conn = await self._acquire()
+        try:
+            cursor = await conn.execute(
+                "SELECT id, text, created_at, importance, valence, emotional_intensity, metadata "
+                "FROM memories ORDER BY created_at DESC LIMIT ?",
+                (n,),
+            )
+            rows = await cursor.fetchall()
+            return [self._row_to_memory(r) for r in rows]
+        finally:
+            await self._release(conn)
+            
 ###############################################################################
 # FastAPI integration helpers (optional import‑time dep)
 ###############################################################################
