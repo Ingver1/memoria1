@@ -23,6 +23,7 @@ import asyncio
 import datetime as _dt
 import logging
 import uuid
+from collections import deque
 
 # stdlib
 from collections.abc import MutableMapping, Sequence
@@ -41,7 +42,31 @@ class Memory:
     created_at: _dt.datetime
     valence: float = 0.0
     emotional_intensity: float = 0.0
+    arousal: float = 0.0
     metadata: dict[str, Any] | None = None
+
+
+@dataclass(slots=True)
+class MemoryEdge:
+    """Directed association between two memories."""
+
+    source_id: str
+    target_id: str
+    weight: float = 1.0
+
+
+class WorkingMemory:
+    """Small FIFO cache representing the current focus of attention."""
+
+    def __init__(self, capacity: int = 7) -> None:
+        self.capacity = capacity
+        self._queue: deque[Memory] = deque(maxlen=capacity)
+
+    def push(self, memory: Memory) -> None:
+        self._queue.append(memory)
+
+    def contents(self) -> Sequence[Memory]:
+        return list(self._queue)
 
 
 class MemoryStoreProtocol(Protocol):
@@ -123,8 +148,8 @@ async def add(
     *,
     valence: float = 0.0,
     emotional_intensity: float = 0.0,
+    arousal: float = 0.0,
     metadata: MutableMapping[str, Any] | None = None,
-    *,
     store: MemoryStoreProtocol | None = None,
 ) -> Memory:
     """Persist a *text* record with optional *metadata* and return a **Memory**.
@@ -146,6 +171,7 @@ async def add(
         text=text,
         valence=valence,
         emotional_intensity=emotional_intensity,
+        arousal=arousal
         metadata=dict(metadata) if metadata else {},
         created_at=_dt.datetime.utcnow(),
     )
