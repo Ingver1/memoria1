@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
@@ -91,7 +92,9 @@ class TestClient:
         if params:
             kwargs.update(params)
         body_payload = json
-        sig = handler.__signature__  # type: ignore[attr-defined]
+        sig = getattr(handler, "__signature__", None)
+        if sig is None:
+            sig = inspect.signature(handler)
         for name, param in sig.parameters.items():
             if name == "request":
                 req = Request()
