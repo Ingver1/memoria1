@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from cryptography.fernet import Fernet, InvalidToken
-from pydantic import BaseModel, Field, PositiveInt, field_validator
+from pydantic import BaseModel, Field, PositiveInt, ValidationError, field_validator
 from pydantic_settings import BaseSettings
 
 __all__ = [
@@ -35,6 +35,11 @@ class DatabaseConfig(BaseModel):
     connection_pool_size: PositiveInt = 10
 
     model_config = {"frozen": True}
+
+    def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover - simple immutability check
+        if self.model_config.get("frozen") and name in self.__dict__:
+            raise ValidationError("DatabaseConfig is immutable")
+        super().__setattr__(name, value)
 
 
 class ModelConfig(BaseModel):
@@ -62,6 +67,21 @@ class SecurityConfig(BaseModel):
 
     model_config = {"frozen": True}
 
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        # Generate key if required
+        if self.encrypt_at_rest and not self.encryption_key:
+            self.encryption_key = Fernet.generate_key().decode()
+        # Run validators manually
+        self._validate_token(self.api_token)
+        if self.encryption_key:
+            self._validate_key(self.encryption_key)
+
+    def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
+        if name in self.__dict__ and self.model_config.get("frozen"):
+            raise ValidationError("SecurityConfig is immutable")
+        super().__setattr__(name, value)
+
     @field_validator("encryption_key")
     @classmethod
     def _validate_key(cls, value: str) -> str:
@@ -87,9 +107,18 @@ class PerformanceConfig(BaseModel):
     max_workers: PositiveInt = 4
     cache_size: PositiveInt = 1_000
     cache_ttl_seconds: PositiveInt = 300
-    rebuild_inrs: PositiveInt = 24
+    rebuild_interval_seconds: PositiveInt = 3600
 
     model_config = {"frozen": True}
+
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        self._workers_range(self.max_workers)
+
+    def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
+        if name in self.__dict__ and self.model_config.get("frozen"):
+            raise ValidationError("PerformanceConfig is immutable")
+        super().__setattr__(name, value)
     
     @field_validator("max_workers")
     @classmethod
@@ -121,6 +150,15 @@ class APIConfig(BaseModel):
 
     model_config = {"frozen": True}
 
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        self._validate_port(self.port)
+
+    def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
+        if name in self.__dict__ and self.model_config.get("frozen"):
+            raise ValidationError("APIConfig is immutable")
+        super().__setattr__(name, value)
+
     @field_validator("port")
     @classmethod
     def _validate_port(cls, value: int) -> int:
@@ -139,6 +177,15 @@ class MonitoringConfig(BaseModel):
     log_level: str = "INFO"
 
     model_config = {"frozen": True}
+
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        self._validate_prom_port(self.prom_port)
+
+    def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
+        if name in self.__dict__ and self.model_config.get("frozen"):
+            raise ValidationError("MonitoringConfig is immutable")
+        super().__setattr__(name, value)
 
     @field_validator("prom_port")
     @classmethod
@@ -163,6 +210,11 @@ class UnifiedSettings(BaseSettings):
 
     model_config = {"env_prefix": "AI_", "env_file": ".env"}
 
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        for p in (self.database.db_path, self.database.vec_path, self.database.cache_path):
+            p.parent.mkdir(parents=True, exist_ok=True)
+
     @classmethod
     def for_testing(cls) -> "UnifiedSettings":
         return cls(
@@ -177,6 +229,7 @@ class UnifiedSettings(BaseSettings):
     def for_production(cls) -> "UnifiedSettings":
         return cls(
             profile="production",
+            database=DatabaseConfig(connection_pool_size=20),
             performance=PerformanceConfig(max_workers=8, cache_size=5_000),
             security=SecurityConfig(encrypt_at_rest=True, filter_pii=True),
         )
@@ -202,72 +255,3 @@ class UnifiedSettings(BaseSettings):
 
     def get_config_summary(self) -> dict[str, Any]:
         def scrub(obj: BaseModel) -> dict[str, Any]:
-            data: dict[str, Any] = json.loads(obj.model_dump_json())
-            data.pop("encryption_key", None)
-            data.pop("api_token", None)
-            data["has_key"] = bool(getattr(obj, "encryption_key", ""))
-            return data
-
-        return {
-            "database": scrub(self.database),
-            "model": scrub(self.model),
-            "security": scrub(self.security),
-            "performance": scrub(self.performance),
-            "reliability": scrub(self.reliability),
-            "api": scrub(self.api),
-            "monitoring": scrub(self.monitoring),
-        }
-
-    def save_to_file(self, path: Path) -> None:
-        path.write_text(self.model_dump_json(indent=2))
-
-    @classmethod
-    def load_from_file(cls, path: Path) -> "UnifiedSettings":
-        data = json.loads(path.read_text())
-        return cls.model_validate(data)
-
-
-def configure_logging(settings: UnifiedSettings) -> None:
-    """Apply ``logging.yaml`` and optionally switch to JSON handlers."""
-
-    from importlib import resources, util
-
-    import yaml
-
-    cfg_path = resources.files("memory_system") / "config" / "logging.yaml"
-    with cfg_path.open("r", encoding="utf-8") as fp:
-        logging_cfg = yaml.safe_load(fp)
-
-    # Fallback gracefully when optional dependency `python-json-logger` is not
-    # available by using the standard ``logging.Formatter``.  Tests do not
-    # install the package, so we strip the custom formatter configuration if the
-    # module cannot be imported.
-    if util.find_spec("pythonjsonlogger") is None:
-        json_formatter = logging_cfg.get("formatters", {}).get("json")
-        if json_formatter:
-            json_formatter.pop("()", None)
-            
-    if os.getenv("LOG_JSON") == "1":
-        logging_cfg["root"]["handlers"] = ["json_console"]
-
-    logging.config.dictConfig(logging_cfg)
-
-
-_settings: UnifiedSettings | None = None
-
-
-def get_settings(profile: str | None = None) -> UnifiedSettings:
-    """Return a cached ``UnifiedSettings`` instance for a given profile."""
-    global _settings
-    if profile:
-        profiles = {
-            "development": UnifiedSettings.for_development,
-            "production": UnifiedSettings.for_production,
-            "testing": UnifiedSettings.for_testing,
-        }
-        factory = profiles.get(profile.lower())
-        _settings = factory() if factory else UnifiedSettings()
-        return _settings
-    if _settings is None:
-        _settings = UnifiedSettings()
-    return _settings
