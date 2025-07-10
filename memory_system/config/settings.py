@@ -224,7 +224,7 @@ class UnifiedSettings(BaseSettings):
     @classmethod
     def load_from_file(cls, path: Path) -> "UnifiedSettings":
         data = json.loads(path.read_text())
-        return cls(**data)
+        return cls.model_validate(data)
 
 
 def configure_logging(settings: UnifiedSettings) -> None:
@@ -256,9 +256,18 @@ def configure_logging(settings: UnifiedSettings) -> None:
 _settings: UnifiedSettings | None = None
 
 
-def get_settings() -> UnifiedSettings:
-    """Return a cached ``UnifiedSettings`` instance."""
+def get_settings(profile: str | None = None) -> UnifiedSettings:
+    """Return a cached ``UnifiedSettings`` instance for a given profile."""
     global _settings
+    if profile:
+        profiles = {
+            "development": UnifiedSettings.for_development,
+            "production": UnifiedSettings.for_production,
+            "testing": UnifiedSettings.for_testing,
+        }
+        factory = profiles.get(profile.lower())
+        _settings = factory() if factory else UnifiedSettings()
+        return _settings
     if _settings is None:
         _settings = UnifiedSettings()
     return _settings
