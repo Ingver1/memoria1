@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any, Callable, TypeVar
+import typing
 
 __all__ = [
     "BaseModel",
@@ -27,10 +29,14 @@ class BaseModel:
     model_config: dict[str, Any] = {}
 
     def __init__(self, **data: Any) -> None:
-        annotations = getattr(self.__class__, "__annotations__", {})
+        annotations = typing.get_type_hints(self.__class__)
         for name in annotations:
             if name not in data and hasattr(self.__class__, name):
-                setattr(self, name, getattr(self.__class__, name))
+                ann = annotations.get(key)
+            if isinstance(value, dict) and isinstance(ann, type) and issubclass(ann, BaseModel):
+                setattr(self, key, ann(**value))
+            else:
+                setattr(self, key, value)
         for key, value in data.items():
             setattr(self, key, value)
 
@@ -43,10 +49,18 @@ class BaseModel:
         raise ValidationError("Invalid data")
 
     def model_dump(self, *, mode: str | None = None) -> dict[str, Any]:
-        return dict(self.__dict__)
+        result: dict[str, Any] = {}
+        for key, value in self.__dict__.items():
+            if isinstance(value, BaseModel):
+                result[key] = value.model_dump()
+            elif isinstance(value, Path):
+                result[key] = str(value)
+            else:
+                result[key] = value
+        return result
 
     def model_dump_json(self, *, indent: int | None = None) -> str:
-        return json.dumps(self.__dict__, indent=indent)
+        return json.dumps(self.model_dump(), indent=indent)
 
 class BaseSettings(BaseModel):
     pass
@@ -59,7 +73,9 @@ PositiveInt = int
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-def Field(default: Any = ..., **_: Any) -> Any:
+def Field(default: Any = ..., **kwargs: Any) -> Any:
+    if "default_factory" in kwargs:
+        return kwargs["default_factory"]()
     return default
 
 def field_validator(*_: str) -> Callable[[F], F]:
