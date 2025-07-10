@@ -314,14 +314,14 @@ from .exceptions import SecurityError
 class PIIPatterns:
     """Collection of regular expressions for common PII types."""
 
-    EMAIL = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+    EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
     PHONE = re.compile(
-        r"^(?:\+?\d{1,2}[ -]?)?(?:\(\d{3}\)|\d{3})[ -.]?\d{3}[ -.]?\d{4}$"
+        r"(?:\+?\d{1,2}[ -]?)?(?:\(\d{3}\)|\d{3})[ -.]?\d{3}[ -.]?\d{4}"
     )
-    CREDIT_CARD = re.compile(r"^(?:\d{4}[ -]?){3}\d{4}$")
-    SSN = re.compile(r"^\d{3}-\d{2}-\d{4}$")
+    CREDIT_CARD = re.compile(r"(?:\d{4}[ -]?){3}\d{4}")
+    SSN = re.compile(r"\d{3}-\d{2}-\d{4}")
     IP_ADDRESS = re.compile(
-        r"^(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2})$"
+        r"(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2})"
     )
   
 
@@ -498,12 +498,12 @@ class EncryptionManager:
     def __init__(self, key: bytes | None = None) -> None:
         self.key = key or secrets.token_bytes(32)
 
-    def encrypt(self, data: str) -> str:
+    def encrypt(self, data: str) -> bytes:
         raw = data.encode()
         out = bytes(b ^ self.key[i % len(self.key)] for i, b in enumerate(raw))
-        return base64.urlsafe_b64encode(out).decode()
-
-    def decrypt(self, token: str) -> str:
-        data = base64.urlsafe_b64decode(token.encode())
+        return base64.urlsafe_b64encode(out)
+      
+    def decrypt(self, token: bytes) -> str:
+        data = base64.urlsafe_b64decode(token)
         out = bytes(b ^ self.key[i % len(self.key)] for i, b in enumerate(data))
         return out.decode()
