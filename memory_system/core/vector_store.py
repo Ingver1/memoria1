@@ -200,8 +200,96 @@ def _from_faiss_id(idx: int) -> str:
     return str(uuid.UUID(int=idx))
 
 
-# Backwards compatibility alias
-VectorStore = AsyncFaissHNSWStore
+# ---------------------------------------------------------------------------
+# Lightweight synchronous store used in the test-suite
+# ---------------------------------------------------------------------------
+import os
+import sqlite3
+import time
+from typing import Sequence as _Seq
+import array as _array
+import numpy as np
+
+
+class VectorStore:
+    """Very small local vector store used only for tests."""
+
+    def __init__(self, base_path: Path, *, dim: int) -> None:
+        self._base_path = Path(base_path)
+        self._dim = dim
+        self._bin_path = self._base_path.with_suffix(".bin")
+        self._db_path = self._base_path.with_suffix(".db")
+
+        self._bin_path.parent.mkdir(parents=True, exist_ok=True)
+        self._file = open(self._bin_path, "a+b")
+        self._conn = sqlite3.connect(self._db_path)
+        self._conn.execute(
+            "CREATE TABLE IF NOT EXISTS vectors (id TEXT PRIMARY KEY, offset INTEGER)"
+        )
+        self._conn.commit()
+
+    # ------------------------------------------------------------------
+    def _validate_vector(self, vector: _Seq[float] | np.ndarray) -> np.ndarray:
+        arr_list = [float(x) for x in vector]
+        if self._dim == 0:
+            self._dim = len(arr_list)
+        if len(arr_list) != self._dim:
+            raise ValidationError(f"expected dim {self._dim}")
+        return np.asarray(arr_list, dtype=np.float32)
+
+def add_vector(self, vector_id: str, vector: _Seq[float] | np.ndarray) -> None:
+        if self._conn.execute("SELECT 1 FROM vectors WHERE id=?", (vector_id,)).fetchone():
+            raise ValidationError("duplicate id")
+        arr = self._validate_vector(vector)
+        self._file.seek(0, os.SEEK_END)
+        offset = self._file.tell()
+        buf = _array.array("f", [float(x) for x in arr])
+        self._file.write(buf.tobytes())
+        self._conn.execute("INSERT INTO vectors (id, offset) VALUES (?, ?)", (vector_id, offset))
+        self._conn.commit()
+
+    def get_vector(self, vector_id: str) -> np.ndarray:
+        row = self._conn.execute("SELECT offset FROM vectors WHERE id=?", (vector_id,)).fetchone()
+        if not row:
+            raise StorageError("Vector not found")
+        offset = row[0]
+        self._file.seek(offset)
+        data = self._file.read(self._dim * 4)
+        buf = _array.array("f")
+        buf.frombytes(data)
+        return np.asarray(buf, dtype=np.float32)
+
+    def remove_vector(self, vector_id: str) -> None:
+        cur = self._conn.execute("DELETE FROM vectors WHERE id=?", (vector_id,))
+        if cur.rowcount == 0:
+            raise StorageError("Vector not found")
+        self._conn.commit()
+
+    def list_ids(self) -> list[str]:
+        rows = self._conn.execute("SELECT id FROM vectors").fetchall()
+        return [r[0] for r in rows]
+
+    async def flush(self) -> None:
+        self._conn.commit()
+        self._file.flush()
+
+async def async_flush(self) -> None:  # compatibility helper
+        await self.flush()
+
+    async def replicate(self) -> None:
+        await self.flush()
+        ts = int(time.time())
+        bak_path = self._bin_path.with_suffix(f".{ts}.bak")
+        shutil.copy2(self._bin_path, bak_path)
+
+    def close(self) -> None:
+        self._conn.commit()
+        self._conn.close()
+        self._file.close()
+
+
+# Backwards compatibility alias for asynchronous FAISS store
+VectorStoreAsync = AsyncFaissHNSWStore
 
 __all__ = [
     "AbstractVectorStore",
