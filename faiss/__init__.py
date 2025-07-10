@@ -56,7 +56,7 @@ class IndexHNSWFlat:
         else:
             ids_to_remove = selector.ids
         mask = np.isin(self.ids, ids_to_remove, invert=True)
-        removed = int(np.sum(~mask)           
+        removed = int(np.sum(~mask))           
         self.ids = self.ids[mask]
         self.vectors = self.vectors[mask]
         return removed
