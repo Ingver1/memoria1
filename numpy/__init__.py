@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import builtins as _builtins
-import struct
 import math
 import pickle
 import random as _random
+import struct
 from typing import Any, Iterable, List, Sequence
 
 
@@ -132,27 +132,27 @@ def concatenate(arrays: List["ndarray"], axis: int = 0) -> "ndarray":
     return ndarray(data)
 
 def argsort(arr: "ndarray", axis: int = -1) -> "ndarray":
-if axis in (-1, 1) or arr.ndim == 1:
-        result = []
+if arr.ndim == 1 or axis in (-1, 1):
+        if arr.ndim == 1:
+            indexed = list(enumerate(arr))
+            indexed.sort(key=lambda x: x[1])
+            return ndarray([i for i, _ in indexed])
+        result: list[list[int]] = []
         for row in arr:
-            if isinstance(row, list):
-                indexed = list(enumerate(row))
-                indexed.sort(key=lambda x: x[1])
-                result.append([i for i, _ in indexed])
-            else:
-                result.append(0)
-        return ndarray(result if arr.ndim > 1 else result[0])
-    elif axis == 0:
+indexed = list(enumerate(row))
+            indexed.sort(key=lambda x: x[1])
+            result.append([i for i, _ in indexed])
+        return ndarray(result)
+    elif axis == 0 and arr.ndim == 2:
         rows = len(arr)
         cols = len(arr[0]) if rows else 0
-        cols_sorted = []
+        cols_sorted: list[list[int]] = []
         for c in range(cols):
             col = [row[c] for row in arr]
             indexed = list(enumerate(col))
             indexed.sort(key=lambda x: x[1])
             cols_sorted.append([i for i, _ in indexed])
-        # transpose back to rows x cols
-        transposed = []
+        transposed: list[list[int]] = []
         for r in range(rows):
             transposed.append([cols_sorted[c][r] for c in range(cols)])
         return ndarray(transposed)
@@ -163,9 +163,9 @@ def take_along_axis(arr: "ndarray", indices: "ndarray", axis: int) -> "ndarray":
     if axis == 0:
         k = len(indices)
         cols = len(indices[0]) if k else 0
-        out = []
+        out: list[list[Any]] = []
         for i in range(k):
-            row_vals = []
+            row_vals: list[Any] = []
             for c in range(cols):
                 row_vals.append(arr[indices[i][c]][c])
             out.append(row_vals)
@@ -173,7 +173,7 @@ def take_along_axis(arr: "ndarray", indices: "ndarray", axis: int) -> "ndarray":
     elif axis == 1:
         out = []
         for row, idx_row in zip(arr, indices, strict=False):
-            row_out = []
+            row_out: list[Any] = []
             for i in idx_row:
                 row_out.append(row[i])
             out.append(row_out)
@@ -204,12 +204,12 @@ def sum(arr: "ndarray") -> Any:
     total = 0.0
     for item in arr:
         total += float(item)
-     return total
+    return total
     
 class _Linalg:
     @staticmethod
     def norm(
-        arr: "ndarray", axis: int | None = None, keepdims: bool return total= False
+        arr: "ndarray", axis: int | None = None, keepdims: bool = False
     ) -> "ndarray" | float:
         if axis is None:
             flat = [item for sub in arr for item in (sub if isinstance(sub, list) else [sub])]
