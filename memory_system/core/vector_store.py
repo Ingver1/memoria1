@@ -33,6 +33,7 @@ from typing import Any
 
 import faiss
 import numpy as _np
+from memory_system.utils.exceptions import StorageError, ValidationError
 
 _LOGGER = logging.getLogger(__name__)
 
