@@ -112,7 +112,9 @@ class FaissHNSWIndex:
         if len(ids) != len(vectors):
             raise ANNIndexError("ids and vectors length mismatch")
         if vectors.shape[1] != self.dim:
-            raise ANNIndexError(f"expected dim={self.dim}, got {vectors.shape[1]}")
+            raise ANNIndexError(
+                f"dimension mismatch: expected dim={self.dim}, got {vectors.shape[1]}"
+            )
 
         dup = [item for item, cnt in Counter(ids).items() if cnt > 1]
         if dup:
@@ -151,8 +153,10 @@ class FaissHNSWIndex:
         ef_search: int | None = None,
     ) -> tuple[list[str], list[float]]:
         if vector.shape[-1] != self.dim:
-            raise ANNIndexError(f"expected dim={self.dim}, got {vector.shape[-1]}")
-
+            raise ANNIndexError(
+                f"dimension mismatch: expected dim={self.dim}, got {vector.shape[-1]}"
+            )
+            
         vec = self._to_float32(vector.reshape(1, -1))
         if self.space == "cosine":
             faiss.normalize_L2(vec)
@@ -177,7 +181,7 @@ class FaissHNSWIndex:
         _QUERY_CNT.inc()
 
         ids = [self._int_to_string(i) for i in int_ids[0]]
-        dists = distances[0].tolist()
+        dists = list(distances[0])
         return ids, dists
 
     # ─────────────────────── Rebuild / IO ────────────────────────
