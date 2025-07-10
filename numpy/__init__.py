@@ -23,7 +23,7 @@ class ndarray(list[Any]):
         else:
             self.shape = (len(self),)
             
-            @property
+    @property
     def T(self) -> "ndarray":
         return self
         
