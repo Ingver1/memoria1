@@ -34,6 +34,19 @@ class MemoryBase(BaseModel):
         description="Strength of emotional reaction",
     )
 
+def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        if not self.text or len(self.text) > 10_000:
+            raise ValueError("text must be between 1 and 10000 characters")
+        if len(self.role) > 32:
+            raise ValueError("role too long")
+        if len(self.tags) > 10:
+            raise ValueError("too many tags")
+        if not -1.0 <= self.valence <= 1.0:
+            raise ValueError("valence must be between -1 and 1")
+        if not 0.0 <= self.emotional_intensity <= 1.0:
+            raise ValueError("emotional_intensity must be between 0 and 1")
+
 
 class MemoryCreate(MemoryBase):
     """Payload for *create* operation."""
@@ -80,6 +93,13 @@ class MemoryQuery(BaseModel):
     include_embeddings: bool = Field(
         False, description="Return raw vector embeddings in the response"
     )
+
+def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        if not self.query or len(self.query) > 1_000:
+            raise ValueError("query must be between 1 and 1000 characters")
+        if not 1 <= self.top_k <= 100:
+            raise ValueError("top_k must be between 1 and 100")
 
 
 class MemorySearchResult(MemoryRead):
