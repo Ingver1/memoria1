@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import builtins as _builtins
 from types import SimpleNamespace
-from typing import Iterable
+from typing import Iterable, cast
 
 import numpy as np
 
@@ -10,11 +11,14 @@ METRIC_L2 = 1
 
 
 def normalize_L2(vecs: np.ndarray) -> None:
-    norms = np.linalg.norm(vecs, axis=1, keepdims=True)
-    for i, row in enumerate(norms):
+    raw_norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+    norms_f = np.asarray(cast(np.ndarray, raw_norms))
+    for i, row in enumerate(norms_f):
         if row[0] == 0:
-            norms[i][0] = 1.0
-    vecs /= norms
+            norms_f[i][0] = 1.0
+        vec = vecs[i]
+        norm = norms_f[i][0]
+        vecs[i] = np.asarray([float(x) / float(norm) for x in vec])
 
 
 def swig_ptr(arr: np.ndarray) -> np.ndarray:
@@ -40,11 +44,18 @@ class IndexHNSWFlat:
 
     def search(self, vecs: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
         if self.metric == METRIC_INNER_PRODUCT:
-            scores = self.vectors @ vecs.T
-            distances = -scores
+            scores_list = []
+            for base_vec in self.vectors:
+                row = []
+                for q in vecs:
+                    val = _builtins.sum(float(a) * float(b) for a, b in zip(base_vec, q, strict=False))
+                    row.append(val)
+                scores_list.append(row)
+            scores = np.asarray(scores_list)
+            distances = scores / -1.0
         else:
             diff = self.vectors[:, None, :] - vecs[None, :, :]
-            distances = np.linalg.norm(diff, axis=2)
+            distances = cast(np.ndarray, np.linalg.norm(diff, axis=2))
         idx = np.argsort(distances, axis=0)[:k, :]
         dists = np.take_along_axis(distances, idx, axis=0)
         ids = self.ids[idx]
@@ -56,7 +67,7 @@ class IndexHNSWFlat:
         else:
             ids_to_remove = selector.ids
         mask = np.isin(self.ids, ids_to_remove, invert=True)
-        removed = int(np.sum(~mask))           
+        removed = int(np.sum(np.logical_not(mask)))           
         self.ids = self.ids[mask]
         self.vectors = self.vectors[mask]
         return removed
@@ -85,7 +96,7 @@ class IndexIDMap2:
         return self.base.remove_ids(selector)
 
     @property
-    def hnsw(self):
+    def hnsw(self) -> SimpleNamespace:
         return self.base.hnsw
 
     @property
