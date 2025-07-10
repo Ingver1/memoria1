@@ -1,6 +1,7 @@
-import numpy as np
 from types import SimpleNamespace
 from typing import Iterable
+
+import numpy as np
 
 METRIC_INNER_PRODUCT = 0
 METRIC_L2 = 1
