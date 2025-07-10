@@ -76,7 +76,7 @@ class FastAPI:
         for method, path, func in getattr(router, "routes", []):
             self.routes.append((method, prefix + path, func))
 
-def mount(self, path: str, app: Any) -> None:
+    def mount(self, path: str, app: Any) -> None:
         self.routes.append(("MOUNT", path, app))
 
 
