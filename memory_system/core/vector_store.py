@@ -209,6 +209,7 @@ import os
 import sqlite3
 import time
 from typing import Sequence as _Seq
+import struct as _struct
 
 import numpy as np
 
@@ -232,7 +233,10 @@ class VectorStore:
 
     # ------------------------------------------------------------------
     def _validate_vector(self, vector: _Seq[float] | np.ndarray) -> np.ndarray:
-        arr_list = [float(x) for x in vector]
+        def _f32(val: float) -> float:
+            return _struct.unpack("f", _struct.pack("f", float(val)))[0]
+
+        arr_list = [_f32(x) for x in vector]
         if self._dim == 0:
             self._dim = len(arr_list)
         if len(arr_list) != self._dim:
