@@ -27,37 +27,62 @@ class Request:
 
 
 class FastAPI:
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, lifespan: Callable[["FastAPI"], Any] | None = None, **kwargs: Any) -> None:
         from types import SimpleNamespace
 
         self.state = SimpleNamespace()
         self.dependency_overrides: dict[Any, Any] = {}
+        self.routes: list[tuple[str, str, Callable[..., Any]]] = []
+        self.events: dict[str, list[Callable[..., Any]]] = {"startup": [], "shutdown": []}
+        self.lifespan = lifespan
 
     def add_middleware(self, *args: Any, **kwargs: Any) -> None:
-        ...
+        return None
 
     def on_event(self, event: str) -> Callable[[F], F]:
-        return lambda func: func
+        def decorator(func: F) -> F:
+            self.events.setdefault(event, []).append(func)
+            return func
+
+        return decorator
 
     def get(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
-        return _decorator
+        def decorator(func: F) -> F:
+            self.routes.append(("GET", path, func))
+            return func
+
+        return decorator
 
     def post(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
-        return _decorator
+        def decorator(func: F) -> F:
+            self.routes.append(("GET", path, func))
+            return func
+
+        return decorator
 
     def include_router(self, router: Any) -> None:
-        ...
+        for method, path, func in getattr(router, "routes", []):
+            self.routes.append((method, path, func))
 
 
 class APIRouter:
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        ...
+    def __init__(self, *args: Any, prefix: str = "", **kwargs: Any) -> None:
+        self.prefix = prefix
+        self.routes: list[tuple[str, str, Callable[..., Any]]] = []
 
     def get(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
-        return _decorator
+        def decorator(func: F) -> F:
+            self.routes.append(("GET", self.prefix + path, func))
+            return func
+
+        return decorator
 
     def post(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
-        return _decorator
+        def decorator(func: F) -> F:
+            self.routes.append(("POST", self.prefix + path, func))
+            return func
+
+        return decorator
 
 
 class HTTPException(Exception):
