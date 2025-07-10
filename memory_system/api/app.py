@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 router = APIRouter(tags=["Memory"], prefix="/memory")
 from memory_system.api.routes import health as health_routes
+from memory_system.api.routes import admin as admin_routes
 
 
 @router.post("/add", summary="Add memory", response_description="Memory UUID")
@@ -65,8 +66,8 @@ def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: n
 
     configure_logging(settings)
 
-    app = FastAPI(title="AI‑memory‑ API", version="0.8.0")
-
+    app = FastAPI(title="Unified Memory System", version="0.8.0a0")
+    
     # CORS (can be tightened in prod)
     app.add_middleware(
         CORSMiddleware,
@@ -115,7 +116,12 @@ def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: n
     # Routers ---------------------------------------------------------------
     app.include_router(router, prefix="/api/v1")
     app.include_router(health_routes.router, prefix="/api/v1")
+    app.include_router(admin_routes.router, prefix="/api/v1")
 
+    @app.get("/")
+    async def service_root() -> dict[str, Any]:
+        return await health_routes.root()
+        
     # Metrics ---------------------------------------------------------------
     if settings.monitoring.enable_metrics:
         try:
