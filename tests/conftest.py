@@ -1,11 +1,12 @@
 import pytest
 
-# tests/conftest.py
 """Pytest configuration and fixtures."""
 
 import os
 import tempfile
 from pathlib import Path
+from fastapi.testclient import TestClient
+from memory_system.api.app import create_app
 
 # Set test environment variables
 os.environ.update(
@@ -28,6 +29,24 @@ def test_settings():
         return UnifiedSettings.for_testing()
     except ImportError:
         pytest.skip("memory_system.config.settings not available")
+
+
+@pytest.fixture
+def test_app(test_settings):
+    """Create FastAPI application for tests."""
+    return create_app()
+
+
+@pytest.fixture
+def test_client(test_app):
+    """HTTP client for API tests."""
+    return TestClient(test_app)
+
+
+@pytest.fixture
+def clean_test_vectors(tmp_path):
+    """Temporary path used for vector store tests."""
+    return tmp_path / "vectors"
 
 
 # tests/test_basic.py
