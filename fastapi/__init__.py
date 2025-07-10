@@ -27,7 +27,12 @@ class Request:
 
 
 class FastAPI:
-    def __init__(self, *args: Any, lifespan: Callable[["FastAPI"], Any] | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Any,
+        lifespan: Callable[["FastAPI"], Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
         from types import SimpleNamespace
 
         self.state = SimpleNamespace()
@@ -55,12 +60,12 @@ class FastAPI:
 
     def post(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
         def decorator(func: F) -> F:
-            self.routes.append(("GET", path, func))
+            self.routes.append(("POST", path, func))
             return func
 
         return decorator
 
-def delete(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
+    def delete(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
         def decorator(func: F) -> F:
             self.routes.append(("DELETE", path, func))
             return func
@@ -70,6 +75,9 @@ def delete(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
     def include_router(self, router: Any, *, prefix: str = "") -> None:
         for method, path, func in getattr(router, "routes", []):
             self.routes.append((method, prefix + path, func))
+
+def mount(self, path: str, app: Any) -> None:
+        self.routes.append(("MOUNT", path, app))
 
 
 class APIRouter:
@@ -91,7 +99,7 @@ class APIRouter:
 
         return decorator
 
-def delete(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
+    def delete(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
         def decorator(func: F) -> F:
             self.routes.append(("DELETE", self.prefix + path, func))
             return func
