@@ -60,9 +60,9 @@ class FastAPI:
 
         return decorator
 
-    def include_router(self, router: Any) -> None:
+    def include_router(self, router: Any, *, prefix: str = "") -> None:
         for method, path, func in getattr(router, "routes", []):
-            self.routes.append((method, path, func))
+            self.routes.append((method, prefix + path, func))
 
 
 class APIRouter:
