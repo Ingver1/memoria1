@@ -259,8 +259,93 @@ class SQLiteMemoryStore:
             rows = await cursor.fetchall()
             return [self._row_to_memory(r) for r in rows]
         finally:
+                await self._release(conn)
+
+    async def add_memory(self, mem_obj: Any) -> None:
+        """Add a memory object, accepting either :class:`Memory` or a similar object."""
+        await self.initialise()
+        if isinstance(mem_obj, Memory):
+            mem_to_add = mem_obj
+        else:
+            mid = (
+                getattr(mem_obj, "id", None)
+                or getattr(mem_obj, "memory_id", None)
+                or str(uuid.uuid4())
+            )
+            mtext = mem_obj.text
+            mcreated = getattr(
+                mem_obj,
+                "created_at",
+                dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc),
+            )
+            mimportance = getattr(mem_obj, "importance", 0.0)
+            mvalence = getattr(mem_obj, "valence", 0.0)
+            mintensity = getattr(mem_obj, "emotional_intensity", 0.0)
+            mmeta = getattr(mem_obj, "metadata", None) or {}
+            mem_to_add = Memory(
+                id=mid,
+                text=mtext,
+                created_at=mcreated,
+                importance=mimportance,
+                valence=mvalence,
+                emotional_intensity=mintensity,
+                metadata=mmeta,
+            )
+        await self.add(mem_to_add)
+
+    async def delete_memory(self, memory_id: str) -> None:
+        """Delete a memory entry by ID."""
+        await self.initialise()
+        conn = await self._acquire()
+        try:
+            await conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+            await conn.commit()
+        finally:
             await self._release(conn)
-            
+
+    async def update_memory(
+        self,
+        memory_id: str,
+        *,
+        text: str | None = None,
+        metadata: Dict[str, Any] | None = None,
+    ) -> Memory:
+        """Update text and/or metadata of an existing memory and return the updated row."""
+        await self.initialise()
+        conn = await self._acquire()
+        try:
+            if text is not None:
+                await conn.execute(
+                    "UPDATE memories SET text = ? WHERE id = ?",
+                    (text, memory_id),
+                )
+            if metadata is not None:
+                await conn.execute(
+                    "UPDATE memories SET metadata = json(?) WHERE id = ?",
+                    (json.dumps(metadata), memory_id),
+                )
+            await conn.commit()
+            cursor = await conn.execute(
+                "SELECT * FROM memories WHERE id = ?",
+                (memory_id,),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                raise RuntimeError("Memory not found")
+            return self._row_to_memory(row)
+        finally:
+            await self._release(conn)
+
+    async def search_memory(
+        self,
+        query: str,
+        k: int = 5,
+        *,
+        metadata_filter: Optional[Dict[str, Any]] = None,
+    ) -> List[Memory]:
+        """Search memories by text and optional metadata filters (alias for :meth:`search`)."""
+        return await self.search(text_query=query, metadata_filters=metadata_filter, limit=k)
+
 ###############################################################################
 # FastAPI integration helpers (optional import‑time dep)
 ###############################################################################
