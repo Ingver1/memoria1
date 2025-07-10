@@ -78,7 +78,7 @@ async def readiness_probe(
 ) -> dict[str, Any]:
     """Readiness probe to check if the memory store is ready for requests."""
     component = await memory_store.get_health()
-    if component.heaasync def liveness_probe() -> dict[str, str]:lthy:
+    if component.healthy:
         return {"status": "ready", "timestamp": datetime.now(UTC).isoformat()}
     raise HTTPException(status_code=503, detail=f"Service not ready: {component.message}")
 
