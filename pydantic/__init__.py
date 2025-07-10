@@ -27,6 +27,10 @@ class BaseModel:
     model_config: dict[str, Any] = {}
 
     def __init__(self, **data: Any) -> None:
+        annotations = getattr(self.__class__, "__annotations__", {})
+        for name in annotations:
+            if name not in data and hasattr(self.__class__, name):
+                setattr(self, name, getattr(self.__class__, name))
         for key, value in data.items():
             setattr(self, key, value)
 
