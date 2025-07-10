@@ -30,7 +30,7 @@ import faiss
 import numpy as np
 from memory_system.utils.exceptions import StorageError
 from memory_system.utils.metrics import prometheus_counter
-from numpy.typing import NDArray
+from numpy import ndarray as NDArray
 
 log = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class FaissHNSWIndex:
 
     # ─────────────────────── Helpers ────────────────────────
     @staticmethod
-    def _to_float32(arr: NDArray[np.floating]) -> NDArray[np.float32]:
+    def _to_float32(arr: NDArray) -> NDArray:
         return arr.astype(np.float32, copy=False)
 
     @staticmethod
@@ -107,7 +107,7 @@ class FaissHNSWIndex:
         return hex(i)
 
     # ─────────────────────── Mutators ────────────────────────
-    def add_vectors(self, ids: Sequence[str], vectors: NDArray[np.floating]) -> None:
+    def add_vectors(self, ids: Sequence[str], vectors: NDArray) -> None:
         """Add vectors with external string IDs."""
         if len(ids) != len(vectors):
             raise ANNIndexError("ids and vectors length mismatch")
@@ -119,7 +119,7 @@ class FaissHNSWIndex:
             raise ANNIndexError(f"duplicate IDs in input: {dup[:3]}…")
 
         with self._lock:
-            existing = {i for i in ids if i in self.index.id_map}
+            existing = {i for i in ids if self._string_to_int(i) in self.index.id_map}
             if existing:
                 raise ANNIndexError(f"IDs already present: {list(existing)[:3]}…")
 
@@ -145,7 +145,7 @@ class FaissHNSWIndex:
     # ─────────────────────── Query ────────────────────────
     def search(
         self,
-        vector: NDArray[np.floating],
+        vector: NDArray,
         *,
         k: int = 5,
         ef_search: int | None = None,
@@ -181,7 +181,7 @@ class FaissHNSWIndex:
         return ids, dists
 
     # ─────────────────────── Rebuild / IO ────────────────────────
-    def rebuild(self, vectors: NDArray[np.floating], ids: Sequence[str]) -> None:
+    def rebuild(self, vectors: NDArray, ids: Sequence[str]) -> None:
         """Recreate the FAISS index from scratch in a transactional way."""
         temp = FaissHNSWIndex(self.dim, space=self.space)
         temp.add_vectors(ids, vectors)
