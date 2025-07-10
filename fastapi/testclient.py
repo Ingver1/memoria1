@@ -49,7 +49,7 @@ class TestClient:
         self._loop.run_until_complete(self._startup())
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         self._loop.run_until_complete(self._shutdown())
         self._loop.close()
         asyncio.set_event_loop(None)
@@ -57,6 +57,7 @@ class TestClient:
     async def _startup(self) -> None:
         if self.app.lifespan is not None:
             self._lifespan_cm = self.app.lifespan(self.app)
+            assert self._lifespan_cm is not None
             await self._lifespan_cm.__aenter__()
         for func in self.app.events.get("startup", []):
             result = func()
@@ -72,7 +73,7 @@ class TestClient:
             await self._lifespan_cm.__aexit__(None, None, None)
 
     # Request dispatch ------------------------------------------------
-    def _resolve_handler(self, method: str, url: str) -> Optional[Callable]:
+    def _resolve_handler(self, method: str, url: str) -> Optional[Callable[..., Any]]:
         path = url.split("?")[0]
         if path.startswith(self.base_url):
             path = path[len(self.base_url) :]

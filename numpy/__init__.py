@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import math
+import pickle
 import random as _random
 from typing import Any, Iterable, List, Sequence
 
@@ -19,6 +22,10 @@ class ndarray(list[Any]):
             self.shape = (len(self), len(self[0]))
         else:
             self.shape = (len(self),)
+
+    @property
+    def T(self) -> "ndarray":
+        return self
 
     @property
     def ndim(self) -> int:
@@ -49,6 +56,9 @@ class ndarray(list[Any]):
 
     def __truediv__(self, other: float) -> "ndarray":
         return ndarray([x / other for x in self])
+
+    def __getitem__(self, index: Any) -> Any:  # type: ignore[override]
+        return super().__getitem__(index)
 
 float32 = float
 uint8 = int
@@ -101,14 +111,49 @@ def take_along_axis(arr: "ndarray", indices: "ndarray", axis: int) -> "ndarray":
         result.append(arr[int(idx)])
     return ndarray(result)
 
+def savez(path: str, **arrays: Any) -> None:
+    with open(path, "wb") as f:
+        pickle.dump(arrays, f)
+
+
+def load(path: str) -> dict[str, Any]:
+    with open(path, "rb") as f:
+        return pickle.load(f)
+
+def isin(arr: "ndarray", test_elements: "ndarray", invert: bool = False) -> "ndarray":
+    data = []
+    for item in arr:
+        found = item in test_elements
+        data.append(not found if invert else found)
+    return ndarray(data)
+
+def sum(arr: "ndarray") -> Any:
+    total = 0
+    for item in arr:
+        total += float(item)
+    return total
+
 class _Linalg:
     @staticmethod
-    def norm(arr: "ndarray") -> float:
-        if arr and isinstance(arr[0], list):
-            flat = [item for sub in arr for item in sub]
-        else:
-            flat = list(arr)
-        return math.sqrt(sum(float(x) * float(x) for x in flat))
+    def norm(
+        arr: "ndarray", axis: int | None = None, keepdims: bool = False
+    ) -> "ndarray" | float:
+        if axis is None:
+            flat = [item for sub in arr for item in (sub if isinstance(sub, list) else [sub])]
+            return math.sqrt(sum(float(x) * float(x) for x in flat))
+
+        if axis == 1:
+            result = []
+            for row in arr:
+                if isinstance(row, list):
+                    val = math.sqrt(sum(float(x) * float(x) for x in row))
+                else:
+                    val = float(row)
+                result.append(val)
+            if keepdims:
+                return ndarray([[v] for v in result])
+            return ndarray(result)
+        raise NotImplementedError
 
 linalg = _Linalg()
 
@@ -141,6 +186,10 @@ __all__ = [
     "frombuffer",
     "tile",
     "vstack",
+    "isin",
+    "sum",
+    "savez",
+    "load",
     "linalg",
     "random",
     "testing",

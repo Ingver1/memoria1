@@ -87,9 +87,9 @@ class AsyncFaissHNSWStore(AbstractVectorStore):
             self._index = faiss.read_index(str(index_path))
         else:
             _LOGGER.info("Creating new FAISS HNSW index (dim=%d)", dim)
-            index = faiss.IndexHNSWFlat(dim, 32)
-            index.hnsw.efConstruction = 200
-            self._index = index
+            base = faiss.IndexHNSWFlat(dim, 32)
+            base.hnsw.efConstruction = 200
+            self._index = faiss.IndexIDMap2(base)
             # write initial empty index so replica exists
             faiss.write_index(self._index, str(index_path))
 
