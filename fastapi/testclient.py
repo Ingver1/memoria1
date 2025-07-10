@@ -2,8 +2,9 @@ import asyncio
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
-from . import FastAPI, Request
 from starlette.responses import JSONResponse, Response
+
+from . import FastAPI, Request
 
 
 class _TestResponse:
