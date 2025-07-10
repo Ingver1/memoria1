@@ -7,8 +7,9 @@ import platform
 import sys
 from datetime import UTC, datetime
 from typing import Any
+import asyncio
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from memory_system.api.middleware import check_dependencies, session_tracker
 from memory_system.api.schemas import HealthResponse, StatsResponse
 from memory_system.config.settings import UnifiedSettings, get_settings
@@ -52,10 +53,10 @@ async def root() -> dict[str, Any]:
 # Full health check and liveness/readiness probes
 
 
-@router.get("/health", response_model=HealthResponse, summary="Full health check")
-async def health_check() -> HealthResponse:
+@router.get("/health", summary="Full health check")
+async def health_check() -> dict[str, Any]:
     """Return a minimal health status for tests."""
-    return HealthResponse(
+    payload = HealthResponse(
         status="healthy",
         timestamp=datetime.now(UTC).isoformat(),
         uptime_seconds=0,
@@ -64,6 +65,12 @@ async def health_check() -> HealthResponse:
         memory_store_health={},
         api_enabled=True,
     )
+    return payload.model_dump()
+
+@router.post("/health")
+async def health_method_not_allowed() -> Response:
+    """Explicit 405 response for unsupported POST method."""
+    return Response(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 @router.get("/health/live", summary="Liveness probe")
@@ -74,25 +81,34 @@ async def liveness_probe() -> dict[str, str]:
 
 @router.get("/health/ready", summary="Readiness probe")
 async def readiness_probe(
-    memory_store: EnhancedMemoryStore,
+    memory_store: EnhancedMemoryStore | None = None,
 ) -> dict[str, Any]:
     """Readiness probe to check if the memory store is ready for requests."""
+    memory_store = memory_store or _store()
+    if asyncio.iscoroutine(memory_store):
+        memory_store = await memory_store
     component = await memory_store.get_health()
     if component.healthy:
         return {"status": "ready", "timestamp": datetime.now(UTC).isoformat()}
     raise HTTPException(status_code=503, detail=f"Service not ready: {component.message}")
 
 
-@router.get("/stats", response_model=StatsResponse, summary="System statistics")
+@router.get("/stats", summary="System statistics")
 async def get_stats(
-    memory_store: EnhancedMemoryStore,
-    settings: UnifiedSettings,
-) -> StatsResponse:
+    memory_store: EnhancedMemoryStore | None = None,
+    settings: UnifiedSettings | None = None,
+) -> dict[str, Any]:
     """Retrieve current system and memory store statistics."""
+    memory_store = memory_store or _store()
+    if asyncio.iscoroutine(memory_store):
+        memory_store = await memory_store
+    settings = settings or _settings()
+    if asyncio.iscoroutine(settings):
+        settings = await settings
     stats = await memory_store.get_stats()
     current_time = datetime.now(UTC).timestamp()
     active = sum(1 for ts in session_tracker.values() if ts > current_time - 3600)
-    return StatsResponse(
+    payload = StatsResponse(
         total_memories=stats.get("total_memories", 0),
         active_sessions=active,
         uptime_seconds=stats.get("uptime_seconds", 0),
@@ -108,11 +124,15 @@ async def get_stats(
             "api_version": "v1",
         },
     )
+    return payload.model_dump()
 
 
 @router.get("/metrics", summary="Prometheus metrics")
-async def metrics_endpoint(settings: UnifiedSettings) -> Response:
+async def metrics_endpoint(settings: UnifiedSettings | None = None) -> Response:
     """Expose Prometheus metrics if enabled, otherwise 404."""
+    settings = settings or _settings()
+    if asyncio.iscoroutine(settings):
+        settings = await settings
     if not settings.monitoring.enable_metrics:
         raise HTTPException(status_code=404, detail="Metrics disabled")
     return Response(content=get_prometheus_metrics(), media_type=get_metrics_content_type())
