@@ -47,3 +47,10 @@ class Histogram(_Metric):
 
 def generate_latest() -> bytes:
     return b""
+
+
+def make_asgi_app() -> Any:
+    async def app(scope: Any, receive: Any, send: Any) -> None:
+        return None
+
+    return app
