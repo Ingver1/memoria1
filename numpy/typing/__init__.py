@@ -1,3 +1,8 @@
-from typing import Any
+from __future__ import annotations
 
-NDArray = Any
+from typing import Any, Generic, List, TypeVar
+
+T = TypeVar("T")
+
+class NDArray(List[T], Generic[T]):
+    pass
