@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins as _builtins
+import struct
 import math
 import pickle
 import random as _random
@@ -39,9 +40,15 @@ class ndarray(list[Any]):
         return len(self)
 
     def astype(self, dtype: Any, copy: bool = True) -> "ndarray":
-        # dtype is ignored; return copy if requested
+        def _cast(val: Any) -> Any:
+            if isinstance(val, list):
+                return [_cast(v) for v in val]
+            return struct.unpack("f", struct.pack("f", float(val)))[0]
+
         if copy:
-            return ndarray([x[:] if isinstance(x, list) else x for x in self])
+            return ndarray([_cast(x) for x in self])
+        for i, x in enumerate(self):
+            self[i] = _cast(x)
         return self
 
     def reshape(self, *shape: int) -> "ndarray":
@@ -56,9 +63,29 @@ class ndarray(list[Any]):
         raise NotImplementedError
 
     def __truediv__(self, other: float) -> "ndarray":
-        return ndarray([x / other for x in self])
-        
+        result: list[Any] = []
+        for x in self:
+            if isinstance(x, list):
+                result.append([float(i) / other for i in x])
+            else:
+                result.append(float(x) / other)
+        return ndarray(result)
+
     def __getitem__(self, index: Any) -> Any:
+        if isinstance(index, tuple):
+            row_idx, col_idx = index
+            rows = self[row_idx] if isinstance(row_idx, slice) else [super().__getitem__(row_idx)]
+            if not isinstance(rows, list):
+                rows = [rows]
+            result = []
+            for row in rows:
+                if isinstance(row, list):
+                    result.append(row[col_idx])
+                else:
+                    result.append(row)
+            return result[0] if len(result) == 1 and not isinstance(col_idx, slice) else ndarray(result)
+        if isinstance(index, (list, ndarray)):
+            return ndarray([self[i] for i in index])
         return super().__getitem__(index)
         
 float32 = float
