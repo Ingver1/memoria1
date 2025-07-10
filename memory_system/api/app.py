@@ -15,7 +15,11 @@ from typing import Any, cast
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRouter
-from memory_system.config.settings import UnifiedSettings, configure_logging, get_settings
+from memory_system.config.settings import (
+    UnifiedSettings,
+    configure_logging,
+    get_settings,
+)
 from memory_system.core.store import SQLiteMemoryStore, get_memory_store, get_store
 from memory_system.memory_helpers import MemoryStoreProtocol, add, delete, search
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -26,6 +30,7 @@ logger = logging.getLogger(__name__)
 # Routers
 # ---------------------------------------------------------------------------
 router = APIRouter(tags=["Memory"], prefix="/memory")
+from memory_system.api.routes import health as health_routes
 
 
 @router.post("/add", summary="Add memory", response_description="Memory UUID")
@@ -109,6 +114,7 @@ def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: n
 
     # Routers ---------------------------------------------------------------
     app.include_router(router, prefix="/api/v1")
+    app.include_router(health_routes.router, prefix="/api/v1")
 
     # Metrics ---------------------------------------------------------------
     if settings.monitoring.enable_metrics:
