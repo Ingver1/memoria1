@@ -132,17 +132,19 @@ def concatenate(arrays: List["ndarray"], axis: int = 0) -> "ndarray":
     return ndarray(data)
 
 def argsort(arr: "ndarray", axis: int = -1) -> "ndarray":
-if arr.ndim == 1 or axis in (-1, 1):
+    if arr.ndim == 1 or axis in (-1, 1):
         if arr.ndim == 1:
             indexed = list(enumerate(arr))
             indexed.sort(key=lambda x: x[1])
             return ndarray([i for i, _ in indexed])
+            
         result: list[list[int]] = []
         for row in arr:
-indexed = list(enumerate(row))
+            indexed = list(enumerate(row))
             indexed.sort(key=lambda x: x[1])
             result.append([i for i, _ in indexed])
         return ndarray(result)
+        
     elif axis == 0 and arr.ndim == 2:
         rows = len(arr)
         cols = len(arr[0]) if rows else 0
@@ -152,10 +154,12 @@ indexed = list(enumerate(row))
             indexed = list(enumerate(col))
             indexed.sort(key=lambda x: x[1])
             cols_sorted.append([i for i, _ in indexed])
+            
         transposed: list[list[int]] = []
         for r in range(rows):
             transposed.append([cols_sorted[c][r] for c in range(cols)])
         return ndarray(transposed)
+        
     else:
         raise NotImplementedError
     
