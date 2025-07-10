@@ -1,4 +1,5 @@
 import hashlib
+from typing import cast
 
 import numpy as np
 
@@ -27,7 +28,8 @@ class SentenceTransformer:
                 arr = np.array(np.tile(arr, reps)[: self._dim])
             else:
                 arr = np.array(arr[: self._dim])
-            if np.linalg.norm(arr) != 0:
-                arr = arr / np.linalg.norm(arr)
+            norm_val = float(cast(float, np.linalg.norm(arr)))
+            if norm_val != 0:
+                arr = arr / norm_val
             vectors.append(arr)
         return np.vstack(vectors)
