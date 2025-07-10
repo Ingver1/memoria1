@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import sqlite3
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Sequence, cast
 
 
 class Row(sqlite3.Row):
@@ -35,7 +35,7 @@ class Cursor:
         self._cur = cur
 
     async def fetchone(self) -> Row | None:
-        return self._cur.fetchone()
+        return cast(Row | None, self._cur.fetchone())
 
     async def fetchall(self) -> list[Row]:
         return self._cur.fetchall()
