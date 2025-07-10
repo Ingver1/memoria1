@@ -203,11 +203,12 @@ def _from_faiss_id(idx: int) -> str:
 # ---------------------------------------------------------------------------
 # Lightweight synchronous store used in the test-suite
 # ---------------------------------------------------------------------------
+import array as _array
 import os
 import sqlite3
 import time
 from typing import Sequence as _Seq
-import array as _array
+
 import numpy as np
 
 
@@ -237,7 +238,7 @@ class VectorStore:
             raise ValidationError(f"expected dim {self._dim}")
         return np.asarray(arr_list, dtype=np.float32)
 
-def add_vector(self, vector_id: str, vector: _Seq[float] | np.ndarray) -> None:
+    def add_vector(self, vector_id: str, vector: _Seq[float] | np.ndarray) -> None:
         if self._conn.execute("SELECT 1 FROM vectors WHERE id=?", (vector_id,)).fetchone():
             raise ValidationError("duplicate id")
         arr = self._validate_vector(vector)
@@ -273,7 +274,7 @@ def add_vector(self, vector_id: str, vector: _Seq[float] | np.ndarray) -> None:
         self._conn.commit()
         self._file.flush()
 
-async def async_flush(self) -> None:  # compatibility helper
+    async def async_flush(self) -> None:  # compatibility helper
         await self.flush()
 
     async def replicate(self) -> None:
