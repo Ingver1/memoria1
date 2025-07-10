@@ -265,6 +265,10 @@ class SQLiteMemoryStore:
 # FastAPI integration helpers (optional import‑time dep)
 ###############################################################################
 
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
 async def lifespan_context(app: "FastAPI") -> AsyncIterator[None]:  # pragma: no cover
     """FastAPI lifespan function that attaches a SQLiteMemoryStore to ``app.state``."""
 
