@@ -135,7 +135,8 @@ class AsyncFaissHNSWStore(AbstractVectorStore):
     async def delete(self, ids: Sequence[str]) -> None:
         async with self._lock:
             id_array = _to_faiss_ids(ids)
-            await self._loop.run_in_executor(None, self._index.remove_ids, id_array)
+            selector = faiss.IDSelectorBatch(id_array.size, faiss.swig_ptr(id_array))
+            await self._loop.run_in_executor(None, self._index.remove_ids, selector)
             for _id in ids:
                 self._metadata.pop(_id, None)
 
