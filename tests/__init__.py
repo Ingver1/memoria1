@@ -15,6 +15,8 @@ import os
 import tempfile
 from pathlib import Path
 
+pytest_plugins = ("pytest_asyncio",)
+
 # Test configuration
 TEST_DB_PATH = Path(tempfile.mkdtemp()) / "test_memory.db"
 TEST_VECTOR_PATH = Path(tempfile.mkdtemp()) / "test_vectors.bin"
