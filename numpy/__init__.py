@@ -75,6 +75,32 @@ def vstack(arrays: List["ndarray"]) -> "ndarray":
         data.extend([row[:] if isinstance(row, list) else row for row in arr])
     return ndarray(data)
 
+def empty(shape: int | tuple[int, ...], dtype: Any = float32) -> "ndarray":
+    if isinstance(shape, tuple):
+        size = 1
+        for s in shape:
+            size *= s
+    else:
+        size = shape
+    return ndarray([0.0] * size)
+
+def concatenate(arrays: List["ndarray"], axis: int = 0) -> "ndarray":
+    data = []
+    for arr in arrays:
+        data.extend(list(arr))
+    return ndarray(data)
+
+def argsort(arr: "ndarray", axis: int = -1) -> "ndarray":
+    indexed = list(enumerate(arr))
+    indexed.sort(key=lambda x: x[1])
+    return ndarray([i for i, _ in indexed])
+
+def take_along_axis(arr: "ndarray", indices: "ndarray", axis: int) -> "ndarray":
+    result = []
+    for idx in indices:
+        result.append(arr[int(idx)])
+    return ndarray(result)
+
 class _Linalg:
     @staticmethod
     def norm(arr: "ndarray") -> float:
