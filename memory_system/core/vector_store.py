@@ -234,7 +234,7 @@ class VectorStore:
     # ------------------------------------------------------------------
     def _validate_vector(self, vector: _Seq[float] | np.ndarray) -> np.ndarray:
         def _f32(val: float) -> float:
-            return _struct.unpack("f", _struct.pack("f", float(val)))[0]
+            return float(_struct.unpack("f", _struct.pack("f", float(val)))[0])
 
         arr_list = [_f32(x) for x in vector]
         if self._dim == 0:
