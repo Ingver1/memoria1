@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRouter
 from memory_system.config.settings import UnifiedSettings, configure_logging, get_settings
 from memory_system.core.store import SQLiteMemoryStore, get_memory_store, get_store
-from memory_system.memory_helpers import MemoryStoreProtocol, add, search
+from memory_system.memory_helpers import MemoryStoreProtocol, add, delete, search
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 logger = logging.getLogger(__name__)
@@ -28,12 +28,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Memory"], prefix="/memory")
 
 
-@router.post("/", summary="Add memory", response_description="Memory UUID")
+@router.post("/add", summary="Add memory", response_description="Memory UUID")
 async def add_memory(request: Request, body: dict[str, Any]) -> dict[str, str]:
     """Add a new piece of memory."""
     store = cast(MemoryStoreProtocol, get_memory_store(request))
     mem = await add(body["text"], metadata=body.get("metadata", {}), store=store)
     return {"id": mem.memory_id}
+
+@router.delete("/{memory_id}", summary="Delete memory", response_description="Deletion status")
+async def delete_memory(request: Request, memory_id: str) -> dict[str, str]:
+    """Delete a memory entry by ID."""
+    store = cast(MemoryStoreProtocol, get_memory_store(request))
+    await delete(memory_id, store=store)
+    return {"status": "deleted"}
 
 
 @router.get("/search", summary="Search memory", response_description="Search results")
@@ -94,6 +101,30 @@ def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: n
         await store.aclose()
         logger.info("SQLiteMemoryStore closed")
 
+
+    # Dependency bridge -----------------------------------------------------
+    app.dependency_overrides[get_memory_store] = (
+        lambda req: cast(SQLiteMemoryStore, req.app.state.store)
+    )
+
+    # Routers ---------------------------------------------------------------
+    app.include_router(router, prefix="/api/v1")
+
+    # Metrics ---------------------------------------------------------------
+    if settings.monitoring.enable_metrics:
+        try:
+            from prometheus_client import make_asgi_app
+
+            app.mount("/metrics", make_asgi_app())
+            logger.info("Prometheus /metrics endpoint enabled")
+        except ImportError:  # pragma: no cover - optional feature
+            logger.warning(
+                "prometheus_client not installed, cannot expose /metrics"
+            )
+
+    return app
+    
+    
     # Dependency bridge -----------------------------------------------------
     app.dependency_overrides[get_memory_store] = lambda req: cast(SQLiteMemoryStore, req.app.state.store)
     
