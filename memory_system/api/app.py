@@ -123,15 +123,6 @@ def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: n
             )
 
     return app
-    
-    
-    # Dependency bridge -----------------------------------------------------
-    app.dependency_overrides[get_memory_store] = lambda req: cast(SQLiteMemoryStore, req.app.state.store)
-    
-    # Routers ---------------------------------------------------------------
-    app.include_router(router)
-
-    return app
 
 
 # ---------------------------------------------------------------------------
