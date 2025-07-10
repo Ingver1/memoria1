@@ -1,10 +1,11 @@
-import pytest
-
 """Pytest configuration and fixtures."""
 
 import os
 import tempfile
 from pathlib import Path
+
+import pytest
+
 from fastapi.testclient import TestClient
 from memory_system.api.app import create_app
 
