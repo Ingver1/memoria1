@@ -1,6 +1,7 @@
 import asyncio
 import sqlite3
 
+
 class Row(sqlite3.Row):
     pass
 
