@@ -8,6 +8,7 @@ __all__ = [
     "StatsResponse",
     "MemoryCreate",
     "MemoryRead",
+    "MemoryUpdate",
     "MemoryQuery",
 ]
 
@@ -18,12 +19,13 @@ def __getattr__(name: str) -> object:
         from memory_system.api.app import create_app
 
         return create_app
-    elif name in {"HealthResponse", "StatsResponse", "MemoryCreate", "MemoryRead", "MemoryQuery"}:
+    elif name in {"HealthResponse", "StatsResponse", "MemoryCreate", "MemoryRead", "MemoryUpdate", "MemoryQuery"}:
         from memory_system.api.schemas import (
             HealthResponse,
             MemoryCreate,
             MemoryQuery,
             MemoryRead,
+            MemoryUpdate,
             StatsResponse,
         )
 
