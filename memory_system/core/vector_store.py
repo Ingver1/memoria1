@@ -207,9 +207,9 @@ def _from_faiss_id(idx: int) -> str:
 import array as _array
 import os
 import sqlite3
+import struct as _struct
 import time
 from typing import Sequence as _Seq
-import struct as _struct
 
 import numpy as np
 
