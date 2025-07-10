@@ -132,15 +132,54 @@ def concatenate(arrays: List["ndarray"], axis: int = 0) -> "ndarray":
     return ndarray(data)
 
 def argsort(arr: "ndarray", axis: int = -1) -> "ndarray":
-    indexed = list(enumerate(arr))
-    indexed.sort(key=lambda x: x[1])
-    return ndarray([i for i, _ in indexed])
-
+if axis in (-1, 1) or arr.ndim == 1:
+        result = []
+        for row in arr:
+            if isinstance(row, list):
+                indexed = list(enumerate(row))
+                indexed.sort(key=lambda x: x[1])
+                result.append([i for i, _ in indexed])
+            else:
+                result.append(0)
+        return ndarray(result if arr.ndim > 1 else result[0])
+    elif axis == 0:
+        rows = len(arr)
+        cols = len(arr[0]) if rows else 0
+        cols_sorted = []
+        for c in range(cols):
+            col = [row[c] for row in arr]
+            indexed = list(enumerate(col))
+            indexed.sort(key=lambda x: x[1])
+            cols_sorted.append([i for i, _ in indexed])
+        # transpose back to rows x cols
+        transposed = []
+        for r in range(rows):
+            transposed.append([cols_sorted[c][r] for c in range(cols)])
+        return ndarray(transposed)
+    else:
+        raise NotImplementedError
+    
 def take_along_axis(arr: "ndarray", indices: "ndarray", axis: int) -> "ndarray":
-    result = []
-    for idx in indices:
-        result.append(arr[int(idx)])
-    return ndarray(result)
+    if axis == 0:
+        k = len(indices)
+        cols = len(indices[0]) if k else 0
+        out = []
+        for i in range(k):
+            row_vals = []
+            for c in range(cols):
+                row_vals.append(arr[indices[i][c]][c])
+            out.append(row_vals)
+        return ndarray(out)
+    elif axis == 1:
+        out = []
+        for row, idx_row in zip(arr, indices, strict=False):
+            row_out = []
+            for i in idx_row:
+                row_out.append(row[i])
+            out.append(row_out)
+        return ndarray(out)
+    else:
+        raise NotImplementedError
 
 def savez(path: str, **arrays: Any) -> None:
     with open(path, "wb") as f:
@@ -165,7 +204,32 @@ def sum(arr: "ndarray") -> Any:
     total = 0.0
     for item in arr:
         total += float(item)
-    return total
+     if axis in (-1, 1) or arr.ndim == 1:
+        result = []
+        for row in arr:
+            if isinstance(row, list):
+                indexed = list(enumerate(row))
+                indexed.sort(key=lambda x: x[1])
+                result.append([i for i, _ in indexed])
+            else:
+                result.append(0)
+        return ndarray(result if arr.ndim > 1 else result[0])
+    elif axis == 0:
+        rows = len(arr)
+        cols = len(arr[0]) if rows else 0
+        cols_sorted = []
+        for c in range(cols):
+            col = [row[c] for row in arr]
+            indexed = list(enumerate(col))
+            indexed.sort(key=lambda x: x[1])
+            cols_sorted.append([i for i, _ in indexed])
+        # transpose back to rows x cols
+        transposed = []
+        for r in range(rows):
+            transposed.append([cols_sorted[c][r] for c in range(cols)])
+        return ndarray(transposed)
+    else:
+        raise NotImplementedError   return total
     
 class _Linalg:
     @staticmethod
