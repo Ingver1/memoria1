@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+import typing
 from pathlib import Path
 from typing import Any, Callable, TypeVar
-import typing
 
 __all__ = [
     "BaseModel",
@@ -30,13 +30,17 @@ class BaseModel:
 
     def __init__(self, **data: Any) -> None:
         annotations = typing.get_type_hints(self.__class__)
-        for name in annotations:
-            if name not in data and hasattr(self.__class__, name):
-                ann = annotations.get(key)
-            if isinstance(value, dict) and isinstance(ann, type) and issubclass(ann, BaseModel):
-                setattr(self, key, ann(**value))
+        for name, ann in annotations.items():
+            if name in data:
+                value = data.pop(name)
+            elif hasattr(self.__class__, name):
+                value = getattr(self.__class__, name)
             else:
-                setattr(self, key, value)
+                continue
+            if isinstance(value, dict) and isinstance(ann, type) and issubclass(ann, BaseModel):
+                setattr(self, name, ann(**value))
+            else:
+                setattr(self, name, value)
         for key, value in data.items():
             setattr(self, key, value)
 
