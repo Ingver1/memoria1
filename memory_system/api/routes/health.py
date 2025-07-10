@@ -67,18 +67,7 @@ async def health_check() -> HealthResponse:
 
 
 @router.get("/health/live", summary="Liveness probe")
-async def liveness_probe@router.get("/health", response_model=HealthResponse, summary="Full health check")
-async def health_check() -> HealthResponse:
-    """Return a minimal health status for tests."""
-    return HealthResponse(
-        status="healthy",
-        timestamp=datetime.now(UTC).isoformat(),
-        uptime_seconds=0,
-        version="0.8.0a0",
-        checks={},
-        memory_store_health={},
-        api_enabled=True,
-    )() -> dict[str, str]:
+async def liveness_probe() -> dict[str, str]:
     """Simple liveness probe endpoint (always returns alive if reachable)."""
     return {"status": "alive", "timestamp": datetime.now(UTC).isoformat()}
 
@@ -89,7 +78,7 @@ async def readiness_probe(
 ) -> dict[str, Any]:
     """Readiness probe to check if the memory store is ready for requests."""
     component = await memory_store.get_health()
-    if component.healthy:
+    if component.heaasync def liveness_probe() -> dict[str, str]:lthy:
         return {"status": "ready", "timestamp": datetime.now(UTC).isoformat()}
     raise HTTPException(status_code=503, detail=f"Service not ready: {component.message}")
 
