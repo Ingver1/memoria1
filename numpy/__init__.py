@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins as _builtins
 import math
 import pickle
 import random as _random
@@ -57,7 +58,7 @@ class ndarray(list[Any]):
     def __truediv__(self, other: float) -> "ndarray":
         return ndarray([x / other for x in self])
         
-    def __getitem__(self, index: Any) -> Any:  # type: ignore[override]
+    def __getitem__(self, index: Any) -> Any:
         return super().__getitem__(index)
         
 float32 = float
@@ -85,6 +86,9 @@ def vstack(arrays: List["ndarray"]) -> "ndarray":
         data.extend([row[:] if isinstance(row, list) else row for row in arr])
     return ndarray(data)
 
+def logical_not(arr: "ndarray") -> "ndarray":
+    return ndarray([not bool(x) for x in arr])
+    
 def empty(shape: int | tuple[int, ...], dtype: Any = float32) -> "ndarray":
     if isinstance(shape, tuple):
         size = 1
@@ -118,7 +122,10 @@ def savez(path: str, **arrays: Any) -> None:
 
 def load(path: str) -> dict[str, Any]:
     with open(path, "rb") as f:
-        return pickle.load(f)
+        data = pickle.load(f)
+    if not isinstance(data, dict):
+        raise TypeError("Expected dict in numpy.load stub")
+    return data
 
 def isin(arr: "ndarray", test_elements: "ndarray", invert: bool = False) -> "ndarray":
     data = []
@@ -128,7 +135,7 @@ def isin(arr: "ndarray", test_elements: "ndarray", invert: bool = False) -> "nda
     return ndarray(data)
 
 def sum(arr: "ndarray") -> Any:
-    total = 0
+    total = 0.0
     for item in arr:
         total += float(item)
     return total
@@ -140,13 +147,13 @@ class _Linalg:
     ) -> "ndarray" | float:
         if axis is None:
             flat = [item for sub in arr for item in (sub if isinstance(sub, list) else [sub])]
-            return math.sqrt(sum(float(x) * float(x) for x in flat))
+            return math.sqrt(_builtins.sum(float(x) * float(x) for x in flat))
 
         if axis == 1:
             result = []
             for row in arr:
                 if isinstance(row, list):
-                    val = math.sqrt(sum(float(x) * float(x) for x in row))
+                    val = math.sqrt(_builtins.sum(float(x) * float(x) for x in row))
                 else:
                     val = float(row)
                 result.append(val)
