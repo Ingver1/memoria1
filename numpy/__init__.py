@@ -204,37 +204,12 @@ def sum(arr: "ndarray") -> Any:
     total = 0.0
     for item in arr:
         total += float(item)
-     if axis in (-1, 1) or arr.ndim == 1:
-        result = []
-        for row in arr:
-            if isinstance(row, list):
-                indexed = list(enumerate(row))
-                indexed.sort(key=lambda x: x[1])
-                result.append([i for i, _ in indexed])
-            else:
-                result.append(0)
-        return ndarray(result if arr.ndim > 1 else result[0])
-    elif axis == 0:
-        rows = len(arr)
-        cols = len(arr[0]) if rows else 0
-        cols_sorted = []
-        for c in range(cols):
-            col = [row[c] for row in arr]
-            indexed = list(enumerate(col))
-            indexed.sort(key=lambda x: x[1])
-            cols_sorted.append([i for i, _ in indexed])
-        # transpose back to rows x cols
-        transposed = []
-        for r in range(rows):
-            transposed.append([cols_sorted[c][r] for c in range(cols)])
-        return ndarray(transposed)
-    else:
-        raise NotImplementedError   return total
+     return total
     
 class _Linalg:
     @staticmethod
     def norm(
-        arr: "ndarray", axis: int | None = None, keepdims: bool = False
+        arr: "ndarray", axis: int | None = None, keepdims: bool return total= False
     ) -> "ndarray" | float:
         if axis is None:
             flat = [item for sub in arr for item in (sub if isinstance(sub, list) else [sub])]
