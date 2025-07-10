@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from types import SimpleNamespace
 from typing import Iterable
 
@@ -9,7 +11,9 @@ METRIC_L2 = 1
 
 def normalize_L2(vecs: np.ndarray) -> None:
     norms = np.linalg.norm(vecs, axis=1, keepdims=True)
-    norms[norms == 0] = 1.0
+    for i, row in enumerate(norms):
+        if row[0] == 0:
+            norms[i][0] = 1.0
     vecs /= norms
 
 
@@ -23,7 +27,7 @@ class IDSelectorBatch:
 
 
 class IndexHNSWFlat:
-    def __init__(self, dim: int, M: int, metric: int) -> None:
+    def __init__(self, dim: int, M: int, metric: int = METRIC_L2) -> None:
         self.dim = dim
         self.metric = metric
         self.vectors = np.empty((0, dim), dtype="float32")
@@ -34,7 +38,7 @@ class IndexHNSWFlat:
         self.vectors = np.vstack([self.vectors, vectors])
         self.ids = np.concatenate([self.ids, ids])
 
-    def search(self, vecs: np.ndarray, k: int):
+    def search(self, vecs: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
         if self.metric == METRIC_INNER_PRODUCT:
             scores = self.vectors @ vecs.T
             distances = -scores
@@ -46,9 +50,13 @@ class IndexHNSWFlat:
         ids = self.ids[idx]
         return dists.T.astype("float32"), ids.T.astype("int64")
 
-    def remove_ids(self, selector: IDSelectorBatch) -> int:
-        mask = np.isin(self.ids, selector.ids, invert=True)
-        removed = np.sum(~mask)
+    def remove_ids(self, selector: IDSelectorBatch | np.ndarray) -> int:
+        if isinstance(selector, np.ndarray):
+            ids_to_remove = selector
+        else:
+            ids_to_remove = selector.ids
+        mask = np.isin(self.ids, ids_to_remove, invert=True)
+        removed = int(np.sum(~mask)           
         self.ids = self.ids[mask]
         self.vectors = self.vectors[mask]
         return removed
@@ -61,14 +69,14 @@ class IndexHNSWFlat:
 class IndexIDMap2:
     def __init__(self, base: IndexHNSWFlat) -> None:
         self.base = base
-        self.id_map = {}
+        self.id_map: dict[int, bool] = {}
 
     def add_with_ids(self, vectors: np.ndarray, ids: np.ndarray) -> None:
         for i in ids:
             self.id_map[int(i)] = True
         self.base.add_with_ids(vectors, ids)
 
-    def search(self, vecs: np.ndarray, k: int):
+    def search(self, vecs: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
         return self.base.search(vecs, k)
 
     def remove_ids(self, selector: IDSelectorBatch) -> int:
