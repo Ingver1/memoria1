@@ -19,7 +19,7 @@ import logging
 import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 from memory_system.config.settings import UnifiedSettings
@@ -86,6 +86,20 @@ class EmbeddingService:
         self._start_processor()  # start background batching thread
         log.info("Embedding service ready (model=%s)", self.model_name)
 
+    # Context manager support
+    def __enter__(self) -> "EmbeddingService":
+        """Enter the service context."""
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: Any | None) -> None:
+        """Ensure the service is closed when leaving a context."""
+        try:
+            asyncio.run(self.close())
+        except RuntimeError:
+            # In case an event loop is already running, schedule close
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self.close())
+    
     # Model management
 
     def _load_model(self) -> None:
@@ -217,6 +231,20 @@ class EmbeddingService:
         if self._batch_thread:
             self._batch_thread.join(timeout=1.0)
         log.info("Embedding service closed.")
+
+# Convenience synchronous wrapper used in tests
+    def shutdown(self) -> None:
+        asyncio.run(self.close())
+
+    def stats(self) -> dict[str, Any]:
+        """Return basic runtime statistics for tests."""
+        return {
+            "model": self.model_name,
+            "dimension": self._model.get_sentence_embedding_dimension() if self._model else 0,
+            "cache": self.cache.get_stats(),
+            "queue_size": len(self._queue),
+            "shutdown": self._shutdown.is_set(),
+        }
 
 
 # ---------------------------------------------------------------------------
