@@ -7,16 +7,22 @@ import random as _random
 import struct
 from typing import Any, Iterable, List, Sequence
 
+float32 = float
+float64 = float
+uint8 = int
+floating = float
+
 
 class ndarray(list[Any]):
     """Very small ndarray substitute supporting basic operations used in tests."""
 
-    def __init__(self, data: Iterable[Any] | Any) -> None:
+    def __init__(self, data: Iterable[Any] | Any, dtype: Any = float32) -> None:
         if isinstance(data, Iterable) and not isinstance(data, (str, bytes)):
             super().__init__(data)
         else:
             super().__init__([data])
         self.shape: tuple[int, ...] = ()
+        self.dtype = dtype
         self._update_shape()
 
     def _update_shape(self) -> None:
@@ -46,9 +52,10 @@ class ndarray(list[Any]):
             return struct.unpack("f", struct.pack("f", float(val)))[0]
 
         if copy:
-            return ndarray([_cast(x) for x in self])
+            return ndarray([_cast(x) for x in self], dtype=dtype)
         for i, x in enumerate(self):
             self[i] = _cast(x)
+            self.dtype = dtype
         return self
 
     def reshape(self, *shape: int) -> "ndarray":
@@ -87,19 +94,15 @@ class ndarray(list[Any]):
         if isinstance(index, (list, ndarray)):
             return ndarray([self[i] for i in index])
         return super().__getitem__(index)
-        
-float32 = float
-uint8 = int
-floating = float
 
 def asarray(obj: Sequence[Any], dtype: Any | None = None) -> "ndarray":
-    return ndarray(list(obj))
+    return ndarray(list(obj), dtype=dtype or float32)
 
 def array(obj: Sequence[Any], dtype: Any | None = None) -> "ndarray":
-    return ndarray(list(obj))
+    return ndarray(list(obj), dtype=dtype or float32)
     
 def frombuffer(buffer: bytes, dtype: type | int = uint8) -> "ndarray":
-    return ndarray(list(buffer))
+    return ndarray(list(buffer), dtype=dtype)
 
 def tile(arr: "ndarray", reps: int) -> "ndarray":
     data = []
