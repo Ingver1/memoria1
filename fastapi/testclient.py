@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import typing
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
@@ -78,8 +79,14 @@ class TestClient:
         path = url.split("?")[0]
         if path.startswith(self.base_url):
             path = path[len(self.base_url) :]
+        path = path.rstrip("/")
+        if path == "":
+            path = "/"
         for m, p, func in self.app.routes:
-            if m == method and p == path:
+            rp = p.rstrip("/")
+            if rp == "":
+                rp = "/"
+            if m == method and rp == path:
                 return func
         return None
 
@@ -95,13 +102,21 @@ class TestClient:
         sig = getattr(handler, "__signature__", None)
         if sig is None:
             sig = inspect.signature(handler)
+        type_hints = typing.get_type_hints(handler)
         for name, param in sig.parameters.items():
             if name == "request":
                 req = Request()
                 req.app = self.app
                 kwargs[name] = req
             elif name in {"body", "payload", "memories", "query"} and body_payload is not None:
-                kwargs[name] = body_payload
+                model = type_hints.get(name, param.annotation)
+                if hasattr(model, "model_validate"):
+                    try:
+                        kwargs[name] = model.model_validate(body_payload)
+                    except Exception:  # noqa: BLE001
+                        return _TestResponse(Response(status_code=422))
+                else:
+                    kwargs[name] = body_payload
             elif name in kwargs:
                 continue
             elif param.default is not param.empty:
