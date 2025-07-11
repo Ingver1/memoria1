@@ -32,7 +32,9 @@ async def maintenance_status(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Enable maintenance mode",
 )
-async def enable_maintenance(mw: MaintenanceModeMiddleware | None = None) -> None:
+async def enable_maintenance(
+    mw: MaintenanceModeMiddleware | None = None,
+) -> Response:
     """Switch maintenance mode **on** (returns 204 No Content on success)."""
     (mw or MaintenanceModeMiddleware(cast(ASGIApp, None))).enable()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -43,7 +45,9 @@ async def enable_maintenance(mw: MaintenanceModeMiddleware | None = None) -> Non
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Disable maintenance mode",
 )
-async def disable_maintenance(mw: MaintenanceModeMiddleware | None = None) -> None:
+async def disable_maintenance(
+    mw: MaintenanceModeMiddleware | None = None,
+) -> Response:
     """Switch maintenance mode **off** and restore normal operation."""
     (mw or MaintenanceModeMiddleware(cast(ASGIApp, None))).disable()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
