@@ -293,7 +293,7 @@ class VectorStore:
         self.flush()
 
     async def replicate(self) -> None:
-        await self.flush()
+        self.flush()
         ts = int(time.time())
         bak_path = self._bin_path.with_suffix(f".{ts}.bak")
         shutil.copy2(self._bin_path, bak_path)
