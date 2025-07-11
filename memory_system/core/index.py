@@ -104,7 +104,7 @@ class FaissHNSWIndex:
 
     @staticmethod
     def _int_to_string(i: int) -> str:  # not reversible, demo only
-        return hex(i)
+        return hex(int(i))
 
     # ─────────────────────── Mutators ────────────────────────
     def add_vectors(self, ids: Sequence[str], vectors: NDArray) -> None:

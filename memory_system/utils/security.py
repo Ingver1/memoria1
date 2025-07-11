@@ -314,14 +314,14 @@ from .exceptions import SecurityError
 class PIIPatterns:
     """Collection of regular expressions for common PII types."""
 
-    EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+    EMAIL = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
     PHONE = re.compile(
-        r"(?:\+?\d{1,2}[ -]?)?(?:\(\d{3}\)|\d{3})[ -.]?\d{3}[ -.]?\d{4}"
+        r"^(?:\+?\d{1,2}[ -]?)?(?:\(\d{3}\)|\d{3})[ -.]?\d{3}[ -.]?\d{4}$"
     )
-    CREDIT_CARD = re.compile(r"(?:\d{4}[ -]?){3}\d{4}")
-    SSN = re.compile(r"\d{3}-\d{2}-\d{4}")
+    CREDIT_CARD = re.compile(r"^(?:\d{4}[ -]?){3}\d{4}$")
+    SSN = re.compile(r"^\d{3}-\d{2}-\d{4}$")
     IP_ADDRESS = re.compile(
-        r"(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2})"
+        r"^(?:(?:25[0-5]|2[0-4]\d|1?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|1?\d{1,2})$"
     )
   
 
@@ -412,16 +412,25 @@ class SecureTokenManager:
         except Exception as exc:
             raise SecurityError("Invalid token") from exc
 
-    def generate_token(self, user_id: str, *, expires_in: int = 3600, scopes: Iterable[str] | None = None, audience: str | None = None) -> str:
+    def generate_token(
+        self,
+        user_id: str,
+        *,
+        expires_in: int = 3600,
+        scopes: Iterable[str] | None = None,
+        audience: str | None = None,
+        token_type: str = "access",
+    ) -> str:
         if not user_id or len(user_id) > 100:
             raise SecurityError("Invalid user_id")
-        if not 0 < expires_in < 86400:
+        if expires_in <= 0:
             raise SecurityError("Invalid expiration time")
         payload: dict[str, Any] = {
             "sub": user_id,
             "iss": self.issuer,
             "iat": int(time.time()),
             "exp": int(time.time()) + expires_in,
+            "token_type": token_type,
         }
         if scopes:
             payload["scopes"] = list(scopes)
@@ -430,7 +439,12 @@ class SecureTokenManager:
         return self._encode(payload)
 
     def generate_refresh_token(self, user_id: str) -> str:
-        return self.generate_token(user_id, audience="refresh", expires_in=3600 * 24 * 7)
+        return self.generate_token(
+            user_id,
+            audience="refresh",
+            expires_in=3600 * 24 * 7,
+            token_type="refresh",
+        )
 
     def verify_token(self, token: str, *, audience: str | None = None) -> dict[str, Any]:
         if token in self.revoked_tokens:

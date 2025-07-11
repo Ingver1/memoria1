@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRouter
 from memory_system.api.routes import admin as admin_routes
 from memory_system.api.routes import health as health_routes
+from memory_system.api.routes import memory as memory_routes
 from memory_system.config.settings import (
     UnifiedSettings,
     configure_logging,
@@ -114,7 +115,7 @@ def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: n
     )
 
     # Routers ---------------------------------------------------------------
-    app.include_router(router, prefix="/api/v1")
+    app.include_router(memory_routes.router, prefix="/api/v1")
     app.include_router(health_routes.router, prefix="/api/v1")
     app.include_router(admin_routes.router, prefix="/api/v1")
 

@@ -236,7 +236,17 @@ class VectorStore:
         def _f32(val: float) -> float:
             return float(_struct.unpack("f", _struct.pack("f", float(val)))[0])
 
-        arr_list = [_f32(x) for x in vector]
+        if isinstance(vector, np.ndarray):
+            if getattr(vector, "dtype", np.float32) is not np.float32:
+                raise ValidationError("vector dtype must be float32")
+            if vector.ndim != 1:
+                raise ValidationError("vector must be 1-D")
+            arr_list = [_f32(x) for x in vector]
+        else:
+            for x in vector:
+                if isinstance(x, (list, tuple, np.ndarray)):
+                    raise ValidationError("vector must be 1-D")
+            arr_list = [_f32(x) for x in vector]
         if self._dim == 0:
             self._dim = len(arr_list)
         if len(arr_list) != self._dim:
@@ -275,12 +285,12 @@ class VectorStore:
         rows = self._conn.execute("SELECT id FROM vectors").fetchall()
         return [r[0] for r in rows]
 
-    async def flush(self) -> None:
+    def flush(self) -> None:
         self._conn.commit()
         self._file.flush()
 
     async def async_flush(self) -> None:  # compatibility helper
-        await self.flush()
+        self.flush()
 
     async def replicate(self) -> None:
         await self.flush()

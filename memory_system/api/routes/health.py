@@ -131,7 +131,12 @@ async def metrics_endpoint(settings: Optional[UnifiedSettings] = None) -> Respon
         settings = await settings
     if not settings.monitoring.enable_metrics:
         raise HTTPException(status_code=404, detail="Metrics disabled")
-    return Response(content=get_prometheus_metrics(), media_type=get_metrics_content_type())
+    ctype = get_metrics_content_type()
+    return Response(
+        content=get_prometheus_metrics(),
+        media_type=ctype,
+        headers={"content-type": ctype},
+    )
 
 
 @router.get("/version", summary="Version info")
