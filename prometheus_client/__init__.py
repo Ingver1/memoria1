@@ -46,11 +46,19 @@ class Histogram(_Metric):
         return self
 
 def generate_latest() -> bytes:
-    return b""
+    return b"# HELP dummy Dummy metric\n# TYPE dummy counter\n"
 
 
 def make_asgi_app() -> Any:
     async def app(scope: Any, receive: Any, send: Any) -> None:
-        return None
+        if scope.get("type") != "http":
+            return
+        body = generate_latest()
+        headers = [
+            (b"content-type", CONTENT_TYPE_LATEST.encode()),
+            (b"content-length", str(len(body)).encode()),
+        ]
+        await send({"type": "http.response.start", "status": 200, "headers": headers})
+        await send({"type": "http.response.body", "body": body})
 
     return app
