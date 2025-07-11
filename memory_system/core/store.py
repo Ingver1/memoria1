@@ -183,7 +183,7 @@ class SQLiteMemoryStore:
         conn = await self._acquire()
         try:
             await conn.execute(
-                "INSERT INTO memories (id, text, created_at, importance, valence, emotional_intensity, metadata)"
+                "INSERT OR REPLACE INTO memories (id, text, created_at, importance, valence, emotional_intensity, metadata)"
                 " VALUES (?, ?, ?, ?, ?, ?, json(?))",
                 (
                     mem.id,
@@ -196,7 +196,12 @@ class SQLiteMemoryStore:
                 ),
             )
             await conn.commit()
-        finally:
+        except Exception:
+            await conn.rollback()
+            await conn.close()
+            self._created -= 1
+            raise
+        else:
             await self._release(conn)
 
     async def get(self, memory_id: str) -> Optional[Memory]:
@@ -220,17 +225,25 @@ class SQLiteMemoryStore:
         finally:
             await self._release(conn)
 
-    def _row_to_memory(self, row: aiosqlite.Row) -> Memory:
-        """Map a database row to a :class:`Memory` instance."""
-        meta_raw = row["metadata"]
+    def _row_to_memory(self, row: aiosqlite.Row | Any) -> Memory:
+        """Map a database row or a row-like object to a :class:`Memory`."""
+
+        def _get(obj: Any, key: str) -> Any:
+            try:
+                return obj[key]  # type: ignore[index]
+            except Exception:
+                return getattr(obj, key)
+
+        meta_raw = _get(row, "metadata")
         metadata = json.loads(meta_raw) if meta_raw not in (None, "null") else None
+        
         return Memory(
-            id=row["id"],
-            text=row["text"],
-            created_at=dt.datetime.fromisoformat(row["created_at"]),
-            importance=row["importance"],
-            valence=row["valence"],
-            emotional_intensity=row["emotional_intensity"],
+            id=_get(row, "id"),
+            text=_get(row, "text"),
+            created_at=dt.datetime.fromisoformat(_get(row, "created_at")),
+            importance=_get(row, "importance"),
+            valence=_get(row, "valence"),
+            emotional_intensity=_get(row, "emotional_intensity"),
             metadata=metadata,
         )
 
@@ -417,6 +430,10 @@ async def get_store(path: str | Path | None = None) -> SQLiteMemoryStore:
 
     global _STORE
     async with _STORE_LOCK:
+        global _STORE
+        if _STORE is not None and path is not None and _STORE._path != Path(path):
+            await _STORE.aclose()
+            _STORE = None
         if _STORE is None:
             dsn = f"file:{path}?mode=rwc" if path else "file:memories.db?mode=rwc"
             _STORE = SQLiteMemoryStore(dsn)
