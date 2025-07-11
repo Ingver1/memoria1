@@ -244,7 +244,14 @@ class EmbeddingService:
 
 # Convenience synchronous wrapper used in tests
     def shutdown(self) -> None:
-        asyncio.run(self.close())
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            loop.create_task(self.close())
+        else:
+            asyncio.run(self.close())
 
     def stats(self) -> dict[str, Any]:
         """Return basic runtime statistics for tests."""
