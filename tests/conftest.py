@@ -1,10 +1,24 @@
 """Pytest configuration and fixtures."""
 
+import inspect
 import os
 import tempfile
 from pathlib import Path
 
 import pytest
+
+
+def pytest_configure(config):
+    """Register custom markers used in the test suite."""
+    config.addinivalue_line("markers", "asyncio: mark async test")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Automatically mark async test functions with pytest.mark.asyncio."""
+    for item in items:
+        test_fn = getattr(item, "obj", None)
+        if inspect.iscoroutinefunction(test_fn):
+            item.add_marker(pytest.mark.asyncio)
 
 from fastapi.testclient import TestClient
 from memory_system.api.app import create_app
