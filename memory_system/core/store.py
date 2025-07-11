@@ -157,12 +157,12 @@ class SQLiteMemoryStore:
             conn = await self._pool.get()
             await conn.close()
             self._created = 0
-            
-            async def close(self) -> None:
+
+    async def close(self) -> None:
         """Compatibility alias for ``aclose`` used in tests."""
         await self.aclose()
-        
-   # -------------------------------------
+
+    # -------------------------------------
     async def add(self, mem: Memory) -> None:
         await self.initialise()
         conn = await self._acquire()
