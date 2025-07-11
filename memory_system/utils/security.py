@@ -314,14 +314,14 @@ from .exceptions import SecurityError
 class PIIPatterns:
     """Collection of regular expressions for common PII types."""
 
-    EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+    EMAIL = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
     PHONE = re.compile(
-        r"(?:\+?\d{1,2}[ -]?)?(?:\(\d{3}\)|\d{3})[ -.]?\d{3}[ -.]?\d{4}"
+        r"^(?:\+?\d{1,2}[ -]?)?(?:\(\d{3}\)|\d{3})[ -.]?\d{3}[ -.]?\d{4}$"
     )
-    CREDIT_CARD = re.compile(r"(?:\d{4}[ -]?){3}\d{4}")
-    SSN = re.compile(r"\d{3}-\d{2}-\d{4}")
+    CREDIT_CARD = re.compile(r"^(?:\d{4}[ -]?){3}\d{4}$")
+    SSN = re.compile(r"^\d{3}-\d{2}-\d{4}$")
     IP_ADDRESS = re.compile(
-        r"(?:25[0-5]|2[0-4]\d|1?\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1?\d{1,2})){3}"
+        r"^(?:25[0-5]|2[0-4]\d|1?\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1?\d{1,2})){3}$"
     )
   
 
@@ -423,7 +423,7 @@ class SecureTokenManager:
     ) -> str:
         if not user_id or len(user_id) > 100:
             raise SecurityError("Invalid user_id")
-        if expires_in <= 0:
+        if expires_in <= 0 or expires_in > 86_400:
             raise SecurityError("Invalid expiration time")
         payload: dict[str, Any] = {
             "sub": user_id,
