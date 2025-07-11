@@ -8,7 +8,11 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "asyncio: mark async test")
 
 
+# Single shared event loop for the entire test session.  We also register it as
+# the default loop so that synchronous tests can create ``asyncio`` primitives
+# like :class:`asyncio.Future` without errors.
 LOOP = asyncio.new_event_loop()
+asyncio.set_event_loop(LOOP)
 
 @pytest.hookimpl(tryfirst=True)
 
@@ -19,7 +23,6 @@ def pytest_pyfunc_call(pyfuncitem):
         asyncio.set_event_loop(LOOP)
         kwargs = {name: pyfuncitem.funcargs[name] for name in pyfuncitem._fixtureinfo.argnames}
         LOOP.run_until_complete(testfunc(**kwargs))
-        asyncio.set_event_loop(None)
         return True
 
 

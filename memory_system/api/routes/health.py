@@ -55,14 +55,16 @@ async def root() -> Dict[str, Any]:
 
 @router.get("/health", summary="Full health check")
 async def health_check() -> Dict[str, Any]:
-    """Return a minimal health status for tests."""
+    """Return basic health information including component checks."""
+    store = await _store()
+    component = await store.get_health()
     payload = HealthResponse(
-        status="healthy",
+        status="healthy" if component.healthy else "unhealthy",
         timestamp=datetime.now(UTC).isoformat(),
-        uptime_seconds=0,
+        uptime_seconds=component.uptime,
         version="0.8.0a0",
-        checks={},
-        memory_store_health={},
+        checks=component.checks,
+        memory_store_health={"uptime": component.uptime},
         api_enabled=True,
     )
     return payload.model_dump()
