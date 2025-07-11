@@ -24,6 +24,9 @@ class Connection:
     async def commit(self) -> None:
         self._conn.commit()
 
+    async def rollback(self) -> None:
+        self._conn.rollback()
+        
     async def close(self) -> None:
         self._conn.close()
 
