@@ -197,7 +197,7 @@ class SQLiteMemoryStore:
             )
             await conn.commit()
         except Exception:
-            await conn.rollback()
+            await conn.execute("ROLLBACK")
             await conn.close()
             self._created -= 1
             raise
@@ -230,7 +230,7 @@ class SQLiteMemoryStore:
 
         def _get(obj: Any, key: str) -> Any:
             try:
-                return obj[key]  # type: ignore[index]
+                return obj[key]
             except Exception:
                 return getattr(obj, key)
 
