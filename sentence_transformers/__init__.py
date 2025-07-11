@@ -18,7 +18,7 @@ class SentenceTransformer:
         """Return deterministic embeddings for *texts*."""
         if isinstance(texts, str):
             texts = [texts]
-        vectors: list[np.ndarray] = []
+        vectors: list[list[float]] = []
         for text in texts:
             h = hashlib.sha256(text.encode()).digest()
             arr = np.frombuffer(h, dtype=np.uint8).astype(np.float32)
@@ -31,5 +31,5 @@ class SentenceTransformer:
             norm_val = float(cast(float, np.linalg.norm(arr)))
             if norm_val != 0:
                 arr = arr / norm_val
-            vectors.append(arr)
-        return np.vstack(vectors)
+            vectors.append(list(arr))
+        return np.ndarray(vectors)
