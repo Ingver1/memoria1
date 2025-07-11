@@ -183,7 +183,7 @@ class SQLiteMemoryStore:
         conn = await self._acquire()
         try:
             await conn.execute(
-                "INSERT OR REPLACE INTO memories (id, text, created_at, importance, valence, emotional_intensity, metadata)"
+                "INSERT INTO memories (id, text, created_at, importance, valence, emotional_intensity, metadata)"
                 " VALUES (?, ?, ?, ?, ?, ?, json(?))",
                 (
                     mem.id,
@@ -197,7 +197,7 @@ class SQLiteMemoryStore:
             )
             await conn.commit()
         except Exception:
-            await conn.execute("ROLLBACK")
+            await conn.rollback()
             await conn.close()
             self._created -= 1
             raise
