@@ -315,13 +315,11 @@ class PIIPatterns:
     """Collection of regular expressions for common PII types."""
 
     EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-    PHONE = re.compile(
-        r"(?:\+?\d{1,2}[ -]?)?(?:\(\d{3}\)|\d{3})[ -.]?\d{3}[ -.]?\d{4}"
-    )
-    CREDIT_CARD = re.compile(r"(?:\d{4}[ -]?){3}\d{4}")
-    SSN = re.compile(r"\d{3}-\d{2}-\d{4}")
+    PHONE = re.compile(r"^(?:\+?\d{1,2}[ -]?)?(?:\(\d{3}\)|\d{3})[ -.]?\d{3}[ -.]?\d{4}$")
+    CREDIT_CARD = re.compile(r"^(?:\d{4}[ -]?){3}\d{4}$")
+    SSN = re.compile(r"^\d{3}-\d{2}-\d{4}$")
     IP_ADDRESS = re.compile(
-        r"(?:25[0-5]|2[0-4]\d|1?\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1?\d{1,2})){3}"
+        r"^(?:25[0-5]|2[0-4]\d|1?\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1?\d{1,2})){3}$"
     )
   
 
@@ -331,10 +329,10 @@ class EnhancedPIIFilter:
     def __init__(self, custom_patterns: dict[str, Pattern[str]] | None = None) -> None:
         self.patterns: dict[str, Pattern[str]] = {
             "email": PIIPatterns.EMAIL,
-            "phone": PIIPatterns.PHONE,
-            "credit_card": PIIPatterns.CREDIT_CARD,
-            "ssn": PIIPatterns.SSN,
-            "ip": PIIPatterns.IP_ADDRESS,
+            "phone": re.compile(PIIPatterns.PHONE.pattern.strip("^$")),
+            "credit_card": re.compile(PIIPatterns.CREDIT_CARD.pattern.strip("^$")),
+            "ssn": re.compile(PIIPatterns.SSN.pattern.strip("^$")),
+            "ip": re.compile(PIIPatterns.IP_ADDRESS.pattern.strip("^$")),
         }
         if custom_patterns:
             self.patterns.update(custom_patterns)
