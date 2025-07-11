@@ -116,6 +116,7 @@ def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: n
 
     # Routers ---------------------------------------------------------------
     app.include_router(memory_routes.router, prefix="/api/v1")
+    app.include_router(health_routes.router, prefix="/api/v1")
     app.include_router(admin_routes.router, prefix="/api/v1")
 
     @app.get("/")
