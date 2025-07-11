@@ -70,7 +70,7 @@ async def health_check() -> dict[str, Any]:
 @router.post("/health")
 async def health_method_not_allowed() -> Response:
     """Explicit 405 response for unsupported POST method."""
-    return Response(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
+      return Response(status_code=405)
 
 
 @router.get("/health/live", summary="Liveness probe")
@@ -84,10 +84,8 @@ async def readiness_probe(
     memory_store: EnhancedMemoryStore | None = None,
 ) -> dict[str, Any]:
     """Readiness probe to check if the memory store is ready for requests."""
-    memory_store = memory_store or _store()
-    if asyncio.iscoroutine(memory_store):
-        memory_store = await memory_store
-    component = await memory_store.get_health()
+    store = memory_store if memory_store is not None else await _store()
+    component = await store.get_health()
     if component.healthy:
         return {"status": "ready", "timestamp": datetime.now(UTC).isoformat()}
     raise HTTPException(status_code=503, detail=f"Service not ready: {component.message}")
@@ -99,13 +97,11 @@ async def get_stats(
     settings: UnifiedSettings | None = None,
 ) -> dict[str, Any]:
     """Retrieve current system and memory store statistics."""
-    memory_store = memory_store or _store()
-    if asyncio.iscoroutine(memory_store):
-        memory_store = await memory_store
-    settings = settings or _settings()
-    if asyncio.iscoroutine(settings):
-        settings = await settings
-    stats = await memory_store.get_stats()
+    store = memory_store if memory_store is not None else await _store()
+    config = settings if settings is not None else _settings()
+    if asyncio.iscoroutine(config):
+        config = await config
+    stats = await store.get_stats()
     current_time = datetime.now(UTC).timestamp()
     active = sum(1 for ts in session_tracker.values() if ts > current_time - 3600)
     payload = StatsResponse(
@@ -114,13 +110,13 @@ async def get_stats(
         uptime_seconds=stats.get("uptime_seconds", 0),
         memory_store_stats=stats,
         api_stats={
-            "cors_enabled": settings.api.enable_cors,
-            "rate_limiting_enabled": settings.monitoring.enable_rate_limiting,
-            "metrics_enabled": settings.monitoring.enable_metrics,
-            "encryption_enabled": settings.security.encrypt_at_rest,
-            "pii_filtering_enabled": settings.security.filter_pii,
-            "backup_enabled": settings.reliability.backup_enabled,
-            "model_name": settings.model.model_name,
+            "cors_enabled": config.api.enable_cors,
+            "rate_limiting_enabled": config.monitoring.enable_rate_limiting,
+            "metrics_enabled": config.monitoring.enable_metrics,
+            "encryption_enabled": config.security.encrypt_at_rest,
+            "pii_filtering_enabled": config.security.filter_pii,
+            "backup_enabled": config.reliability.backup_enabled,
+            "model_name": config.model.model_name,
             "api_version": "v1",
         },
     )
