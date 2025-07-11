@@ -7,7 +7,7 @@ import logging
 import platform
 import sys
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, status
 from memory_system.api.middleware import check_dependencies, session_tracker
@@ -37,7 +37,7 @@ def _settings() -> UnifiedSettings:
 
 
 @router.get("/", summary="Service info")
-async def root() -> dict[str, Any]:
+async def root() -> Dict[str, Any]:
     """Root health endpoint providing service information."""
     return {
         "service": "Unified Memory System",
@@ -54,7 +54,7 @@ async def root() -> dict[str, Any]:
 
 
 @router.get("/health", summary="Full health check")
-async def health_check() -> dict[str, Any]:
+async def health_check() -> Dict[str, Any]:
     """Return a minimal health status for tests."""
     payload = HealthResponse(
         status="healthy",
@@ -70,19 +70,19 @@ async def health_check() -> dict[str, Any]:
 @router.post("/health")
 async def health_method_not_allowed() -> Response:
     """Explicit 405 response for unsupported POST method."""
-      return Response(status_code=405)
+    return Response(status_code=405)
 
 
 @router.get("/health/live", summary="Liveness probe")
-async def liveness_probe() -> dict[str, str]:
+async def liveness_probe() -> Dict[str, str]:
     """Simple liveness probe endpoint (always returns alive if reachable)."""
       return {"status": "alive", "timestamp": datetime.now(UTC).isoformat()}
 
 
 @router.get("/health/ready", summary="Readiness probe")
 async def readiness_probe(
-    memory_store: EnhancedMemoryStore | None = None,
-) -> dict[str, Any]:
+    memory_store: Optional[EnhancedMemoryStore] = None,
+) -> Dict[str, Any]:
     """Readiness probe to check if the memory store is ready for requests."""
     store = memory_store if memory_store is not None else await _store()
     component = await store.get_health()
@@ -93,9 +93,9 @@ async def readiness_probe(
 
 @router.get("/stats", summary="System statistics")
 async def get_stats(
-    memory_store: EnhancedMemoryStore | None = None,
-    settings: UnifiedSettings | None = None,
-) -> dict[str, Any]:
+    memory_store: Optional[EnhancedMemoryStore] = None,
+    settings: Optional[UnifiedSettings] = None,
+) -> Dict[str, Any]:
     """Retrieve current system and memory store statistics."""
     store = memory_store if memory_store is not None else await _store()
     config = settings if settings is not None else _settings()
@@ -124,7 +124,7 @@ async def get_stats(
 
 
 @router.get("/metrics", summary="Prometheus metrics")
-async def metrics_endpoint(settings: UnifiedSettings | None = None) -> Response:
+async def metrics_endpoint(settings: Optional[UnifiedSettings] = None) -> Response:
     """Expose Prometheus metrics if enabled, otherwise 404."""
     settings = settings or _settings()
     if asyncio.iscoroutine(settings):
@@ -135,7 +135,7 @@ async def metrics_endpoint(settings: UnifiedSettings | None = None) -> Response:
 
 
 @router.get("/version", summary="Version info")
-async def get_version() -> dict[str, Any]:
+async def get_version() -> Dict[str, Any]:
     """Get version and environment details of the running service."""
     return {
         "version": "0.8.0a0",
