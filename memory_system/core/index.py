@@ -162,7 +162,7 @@ class FaissHNSWIndex:
                 f"dimension mismatch: expected dim={self.dim}, got {vector.shape[-1]}"
             )
             
-            vec_flat = vector.flatten()
+        vec_flat = vector.flatten()
         key = (tuple(float(x) for x in vec_flat), k, ef_search or self.ef_search)
         if key in self._cache:
             return self._cache[key]
@@ -182,7 +182,8 @@ class FaissHNSWIndex:
         except Exception as exc:  # noqa: BLE001
             _QUERY_ERR.inc()
             raise ANNIndexError("FAISS search failed") from exc
-            if int_ids.size == 0:
+
+        if int_ids.size == 0:
             self._cache[key] = ([], [])
             return [], []
         latency = (perf_counter() - start) * 1000.0
