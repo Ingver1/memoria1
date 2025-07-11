@@ -208,6 +208,7 @@ import array as _array
 import os
 import sqlite3
 import struct as _struct
+import threading
 import time
 from typing import Sequence as _Seq
 
@@ -225,7 +226,8 @@ class VectorStore:
 
         self._bin_path.parent.mkdir(parents=True, exist_ok=True)
         self._file = open(self._bin_path, "a+b")
-        self._conn = sqlite3.connect(self._db_path)
+        self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
+        self._db_lock = threading.Lock()
         self._conn.execute(
             "CREATE TABLE IF NOT EXISTS vectors (id TEXT PRIMARY KEY, offset INTEGER)"
         )
@@ -254,40 +256,45 @@ class VectorStore:
         return np.asarray(arr_list, dtype=np.float32)
 
     def add_vector(self, vector_id: str, vector: _Seq[float] | np.ndarray) -> None:
-        if self._conn.execute("SELECT 1 FROM vectors WHERE id=?", (vector_id,)).fetchone():
-            raise ValidationError("duplicate id")
-        arr = self._validate_vector(vector)
-        self._file.seek(0, os.SEEK_END)
-        offset = self._file.tell()
-        buf = _array.array("f", [float(x) for x in arr])
-        self._file.write(buf.tobytes())
-        self._conn.execute("INSERT INTO vectors (id, offset) VALUES (?, ?)", (vector_id, offset))
-        self._conn.commit()
+        with self._db_lock:
+            if self._conn.execute("SELECT 1 FROM vectors WHERE id=?", (vector_id,)).fetchone():
+                raise ValidationError("duplicate id")
+            arr = self._validate_vector(vector)
+            self._file.seek(0, os.SEEK_END)
+            offset = self._file.tell()
+            buf = _array.array("f", [float(x) for x in arr])
+            self._file.write(buf.tobytes())
+            self._conn.execute("INSERT INTO vectors (id, offset) VALUES (?, ?)", (vector_id, offset))
+            self._conn.commit()
 
     def get_vector(self, vector_id: str) -> np.ndarray:
-        row = self._conn.execute("SELECT offset FROM vectors WHERE id=?", (vector_id,)).fetchone()
-        if not row:
-            raise StorageError("Vector not found")
-        offset = row[0]
-        self._file.seek(offset)
-        data = self._file.read(self._dim * 4)
-        buf = _array.array("f")
-        buf.frombytes(data)
-        return np.asarray(buf, dtype=np.float32)
+        with self._db_lock:
+            if self._conn.execute("SELECT 1 FROM vectors WHERE id=?", (vector_id,)).fetchone():
+                raise ValidationError("duplicate id")
+            arr = self._validate_vector(vector)
+            self._file.seek(0, os.SEEK_END)
+            offset = self._file.tell()
+            buf = _array.array("f", [float(x) for x in arr])
+            self._file.write(buf.tobytes())
+            self._conn.execute("INSERT INTO vectors (id, offset) VALUES (?, ?)", (vector_id, offset))
+            self._conn.commit()
 
     def remove_vector(self, vector_id: str) -> None:
-        cur = self._conn.execute("DELETE FROM vectors WHERE id=?", (vector_id,))
-        if cur.rowcount == 0:
-            raise StorageError("Vector not found")
-        self._conn.commit()
+        with self._db_lock:
+            cur = self._conn.execute("DELETE FROM vectors WHERE id=?", (vector_id,))
+            if cur.rowcount == 0:
+                raise StorageError("Vector not found")
+            self._conn.commit()
 
     def list_ids(self) -> list[str]:
-        rows = self._conn.execute("SELECT id FROM vectors").fetchall()
-        return [r[0] for r in rows]
+        with self._db_lock:
+            rows = self._conn.execute("SELECT id FROM vectors").fetchall()
+            return [r[0] for r in rows]
 
     async def flush(self) -> None:
-        self._conn.commit()
-        self._file.flush()
+        with self._db_lock:
+            self._conn.commit()
+            self._file.flush()
 
     async def async_flush(self) -> None:  # compatibility helper
         await self.flush()
@@ -299,9 +306,10 @@ class VectorStore:
         shutil.copy2(self._bin_path, bak_path)
 
     def close(self) -> None:
-        self._conn.commit()
-        self._conn.close()
-        self._file.close()
+        with self._db_lock:
+            self._conn.commit()
+            self._conn.close()
+            self._file
 
 
 # Backwards compatibility alias for asynchronous FAISS store
