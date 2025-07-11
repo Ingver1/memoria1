@@ -74,12 +74,14 @@ class SecurityConfig(BaseModel):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        # Generate key if required without breaking immutability
+        if len(self.api_token) < 8:
+            raise ValidationError("API token must be at least 8 characters long")
+        if self.encryption_key:
+            self._validate_key(self.encryption_key)
         if self.encrypt_at_rest and not self.encryption_key:
             object.__setattr__(
                 self, "encryption_key", Fernet.generate_key().decode()
             )
-        # Field validators run via pydantic; no extra calls needed
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
         if name in self.__dict__ and self.model_config.get("frozen"):
@@ -117,6 +119,7 @@ class PerformanceConfig(BaseModel):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
+        self._workers_range(self.max_workers)
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
         if name in self.__dict__ and self.model_config.get("frozen"):
@@ -155,6 +158,7 @@ class APIConfig(BaseModel):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
+        self._validate_port(self.port)
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
         if name in self.__dict__ and self.model_config.get("frozen"):
@@ -182,6 +186,7 @@ class MonitoringConfig(BaseModel):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
+        self._validate_prom_port(self.prom_port)
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
         if name in self.__dict__ and self.model_config.get("frozen"):
@@ -213,6 +218,37 @@ class UnifiedSettings(BaseSettings):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
+        
+        # environment variable overrides
+        envs: dict[str, str] = {}
+        env_file = self.model_config.get("env_file")
+        if env_file and Path(env_file).exists():
+            for line in Path(env_file).read_text().splitlines():
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    envs.setdefault(k.strip(), v.strip())
+        envs.update(os.environ)
+
+        def coerce(val: str, typ: Any) -> Any:
+            if typ is bool:
+                return val.lower() in {"1", "true", "yes", "on"}
+            if typ is int:
+                return int(val)
+            if typ is Path:
+                return Path(val)
+            return val
+
+        for key, value in envs.items():
+            if "__" not in key:
+                continue
+            section, field = key.split("__", 1)
+            section = section.lower()
+            field = field.lower()
+            if hasattr(self, section):
+                cfg = getattr(self, section)
+                if hasattr(cfg, field):
+                    current = getattr(cfg, field)
+                    object.__setattr__(cfg, field, coerce(value, type(current)))
         # Ensure Path objects and existing directories
         paths = [
             self.database.db_path,
