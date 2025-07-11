@@ -4,6 +4,19 @@ from typing import Any, Optional, cast
 from fastapi.testclient import TestClient
 
 
+class _AsyncLock:
+    """Lightweight asyncio lock compatible with older Python versions."""
+
+    def __init__(self) -> None:
+        self._lock = asyncio.Lock()
+
+    async def __aenter__(self) -> None:
+        await self._lock.acquire()
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:  # noqa: ANN001, D401
+        self._lock.release()
+
+
 class Response:
     def __init__(self, resp: Any) -> None:
         self._resp = resp
@@ -33,6 +46,7 @@ class AsyncClient:
         self._base_url = base_url
         self._client: Optional[TestClient] = None
         self._timeout = timeout
+        self._lock = _AsyncLock()
 
     async def __aenter__(self) -> "AsyncClient":
         self._client = TestClient(cast(Any, self._app), base_url=self._base_url)
@@ -59,15 +73,18 @@ class AsyncClient:
 
     async def get(self, url: str, **kwargs: Any) -> Response:
         assert self._client is not None
-        resp = await asyncio.to_thread(self._client.get, url, **kwargs)
+        async with self._lock:
+            resp = await asyncio.to_thread(self._client.get, url, **kwargs)
         return Response(resp)
 
     async def post(self, url: str, **kwargs: Any) -> Response:
         assert self._client is not None
-        resp = await asyncio.to_thread(self._client.post, url, **kwargs)
+        async with self._lock:
+            resp = await asyncio.to_thread(self._client.post, url, **kwargs)
         return Response(resp)
 
     async def delete(self, url: str, **kwargs: Any) -> Response:
         assert self._client is not None
-        resp = await asyncio.to_thread(self._client.delete, url, **kwargs)
+        async with self._lock:
+            resp = await asyncio.to_thread(self._client.delete, url, **kwargs)
         return Response(resp)
