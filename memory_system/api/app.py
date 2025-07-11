@@ -15,6 +15,8 @@ from typing import Any, cast
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRouter
+from memory_system.api.routes import admin as admin_routes
+from memory_system.api.routes import health as health_routes
 from memory_system.config.settings import (
     UnifiedSettings,
     configure_logging,
@@ -30,8 +32,6 @@ logger = logging.getLogger(__name__)
 # Routers
 # ---------------------------------------------------------------------------
 router = APIRouter(tags=["Memory"], prefix="/memory")
-from memory_system.api.routes import health as health_routes
-from memory_system.api.routes import admin as admin_routes
 
 
 @router.post("/add", summary="Add memory", response_description="Memory UUID")
