@@ -285,12 +285,12 @@ class VectorStore:
         rows = self._conn.execute("SELECT id FROM vectors").fetchall()
         return [r[0] for r in rows]
 
-    def flush(self) -> None:
+    async def flush(self) -> None:
         self._conn.commit()
         self._file.flush()
 
     async def async_flush(self) -> None:  # compatibility helper
-        self.flush()
+        await self.flush()
 
     async def replicate(self) -> None:
         self.flush()
