@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any, List
 
@@ -10,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, status
 from memory_system.api.schemas import MemoryCreate, MemoryQuery, MemoryRead, MemorySearchResult
 from memory_system.core.store import Memory, SQLiteMemoryStore, get_memory_store
 from memory_system.utils.security import EnhancedPIIFilter
+from starlette.responses import JSONResponse
 
 log = logging.getLogger(__name__)
 router = APIRouter(tags=["Memory Management"])
@@ -34,7 +36,8 @@ async def create_memory(
     )
     await store.add(mem)
     log.info("Created memory %s", mem.id)
-    return MemoryRead.model_validate(mem)
+    payload = MemoryRead.model_validate(asdict(mem))
+    return JSONResponse(payload.model_dump(), status_code=201)
 
 
 @router.get("/", response_model=list[MemoryRead])
@@ -44,7 +47,8 @@ async def list_memories(
 ) -> List[MemoryRead]:
     store = await _store(request)
     records = await store.search(metadata_filters={"user_id": user_id} if user_id else None)
-    return [MemoryRead.model_validate(r) for r in records]
+    payload = [MemoryRead.model_validate(asdict(r)).model_dump() for r in records]
+    return JSONResponse(payload)
 
 
 @router.post("/search", response_model=list[MemorySearchResult])
@@ -56,11 +60,13 @@ async def search_memories(
         raise HTTPException(status_code=422, detail="Query must not be empty")
     store = await _store(request)
     results = await store.search(text_query=query.query, limit=query.top_k)
-    return [MemorySearchResult.model_validate(r) for r in results]
+    payload = [MemorySearchResult.model_validate(asdict(r)).model_dump() for r in results]
+    return JSONResponse(payload)
 
 
 @router.get("/best", response_model=list[MemoryRead])
 async def best_memories(request: Request, limit: int = Query(5, ge=1, le=50)) -> List[MemoryRead]:
     store = await _store(request)
     records = await store.list_recent(n=limit)
-    return [MemoryRead.model_validate(r) for r in records]
+    payload = [MemoryRead.model_validate(asdict(r)).model_dump() for r in records]
+    return JSONResponse(payload)
