@@ -91,6 +91,8 @@ class FaissHNSWIndex:
         self.ef_search: int = 32  # default runtime ef, can be tuned dynamically
 
         self._stats = IndexStats(dim=dim)
+        # simple in-memory cache for repeated queries
+        self._cache: dict[tuple[float, ...] | tuple, tuple[list[str], list[float]]] = {}
         log.info("FAISS HNSW index initialised: dim=%d, metric=%s", dim, space)
 
     # ─────────────────────── Helpers ────────────────────────
@@ -134,6 +136,7 @@ class FaissHNSWIndex:
             self._stats.total_vectors += len(ids)
             _VEC_ADDED.inc(len(ids))
             log.debug("Added %d vectors", len(ids))
+            self._cache.clear()
 
     def remove_ids(self, ids: Iterable[str]) -> None:
         int_ids = np.array([self._string_to_int(i) for i in ids], dtype="int64")
@@ -143,6 +146,8 @@ class FaissHNSWIndex:
             self._stats.total_vectors -= int(removed)
             _VEC_DELETED.inc(int(removed))
             log.debug("Removed %d vectors", removed)
+            if removed:
+                self._cache.clear()
 
     # ─────────────────────── Query ────────────────────────
     def search(
@@ -156,6 +161,11 @@ class FaissHNSWIndex:
             raise ANNIndexError(
                 f"dimension mismatch: expected dim={self.dim}, got {vector.shape[-1]}"
             )
+            
+            vec_flat = vector.flatten()
+        key = (tuple(float(x) for x in vec_flat), k, ef_search or self.ef_search)
+        if key in self._cache:
+            return self._cache[key]
             
         vec = self._to_float32(vector.reshape(1, -1))
         if self.space == "cosine":
@@ -172,6 +182,9 @@ class FaissHNSWIndex:
         except Exception as exc:  # noqa: BLE001
             _QUERY_ERR.inc()
             raise ANNIndexError("FAISS search failed") from exc
+            if int_ids.size == 0:
+            self._cache[key] = ([], [])
+            return [], []
         latency = (perf_counter() - start) * 1000.0
 
         self._stats.total_queries += 1
@@ -182,6 +195,7 @@ class FaissHNSWIndex:
 
         ids = [self._int_to_string(i) for i in int_ids[0]]
         dists = list(distances[0])
+        self._cache[key] = (ids, dists)
         return ids, dists
 
     # ─────────────────────── Rebuild / IO ────────────────────────
@@ -193,6 +207,7 @@ class FaissHNSWIndex:
             self.index = temp.index
             self._stats.total_vectors = len(ids)
             self._stats.last_rebuild = perf_counter()
+            self._cache.clear()
             log.info("Index rebuilt with %d vectors", len(ids))
 
     def save(self, path: str) -> None:
@@ -204,6 +219,7 @@ class FaissHNSWIndex:
         with self._lock:
             self.index = faiss.read_index(path)
             self._stats.total_vectors = self.index.ntotal
+            self._cache.clear()
             log.info("Index loaded from %s", path)
 
     # ─────────────────────── Info ────────────────────────
