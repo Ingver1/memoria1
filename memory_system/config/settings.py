@@ -35,6 +35,11 @@ class DatabaseConfig(BaseModel):
     connection_pool_size: PositiveInt = 10
 
     model_config = {"frozen": True}
+    
+    @field_validator("db_path", "vec_path", "cache_path")
+    @classmethod
+    def _coerce_path(cls, v: Any) -> Path:
+        return v if isinstance(v, Path) else Path(v)
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover - simple immutability check
         if self.model_config.get("frozen") and name in self.__dict__:
@@ -69,13 +74,12 @@ class SecurityConfig(BaseModel):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        # Generate key if required
+        # Generate key if required without breaking immutability
         if self.encrypt_at_rest and not self.encryption_key:
-            self.encryption_key = Fernet.generate_key().decode()
-        # Run validators manually
-        self._validate_token(self.api_token)
-        if self.encryption_key:
-            self._validate_key(self.encryption_key)
+            object.__setattr__(
+                self, "encryption_key", Fernet.generate_key().decode()
+            )
+        # Field validators run via pydantic; no extra calls needed
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
         if name in self.__dict__ and self.model_config.get("frozen"):
@@ -113,7 +117,6 @@ class PerformanceConfig(BaseModel):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        self._workers_range(self.max_workers)
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
         if name in self.__dict__ and self.model_config.get("frozen"):
@@ -152,7 +155,6 @@ class APIConfig(BaseModel):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        self._validate_port(self.port)
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
         if name in self.__dict__ and self.model_config.get("frozen"):
@@ -180,7 +182,6 @@ class MonitoringConfig(BaseModel):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        self._validate_prom_port(self.prom_port)
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
         if name in self.__dict__ and self.model_config.get("frozen"):
@@ -212,8 +213,20 @@ class UnifiedSettings(BaseSettings):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        for p in (self.database.db_path, self.database.vec_path, self.database.cache_path):
+        # Ensure Path objects and existing directories
+        paths = [
+            self.database.db_path,
+            self.database.vec_path,
+            self.database.cache_path,
+        ]
+        fixed: list[Path] = []
+        for p in paths:
+            p = Path(p)
             p.parent.mkdir(parents=True, exist_ok=True)
+            fixed.append(p)
+        object.__setattr__(self.database, "db_path", fixed[0])
+        object.__setattr__(self.database, "vec_path", fixed[1])
+        object.__setattr__(self.database, "cache_path", fixed[2])
 
     @classmethod
     def for_testing(cls) -> "UnifiedSettings":
