@@ -255,3 +255,54 @@ class UnifiedSettings(BaseSettings):
 
     def get_config_summary(self) -> dict[str, Any]:
         def scrub(obj: BaseModel) -> dict[str, Any]:
+            data = obj.model_dump()
+            data.pop("api_token", None)
+            data.pop("encryption_key", None)
+            if isinstance(obj, SecurityConfig):
+                data["has_key"] = bool(self.security.encryption_key)
+            return data
+
+        return {
+            "version": self.version,
+            "profile": self.profile,
+            "database": scrub(self.database),
+            "model": scrub(self.model),
+            "security": scrub(self.security),
+            "performance": scrub(self.performance),
+            "reliability": scrub(self.reliability),
+            "api": scrub(self.api),
+            "monitoring": scrub(self.monitoring),
+        }
+
+    def save_to_file(self, path: Path) -> None:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self.model_dump(), f, indent=2)
+
+    @classmethod
+    def load_from_file(cls, path: Path) -> "UnifiedSettings":
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return cls(**data)
+
+
+def configure_logging(settings: UnifiedSettings | None = None) -> None:
+    """Configure basic console logging for the application."""
+
+    settings = settings or UnifiedSettings()
+
+    level = getattr(logging, settings.monitoring.log_level.upper(), logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
+
+def get_settings(env: str | None = None) -> UnifiedSettings:
+    env = env or os.getenv("AI_ENV", "development")
+    if env == "production":
+        return UnifiedSettings.for_production()
+    if env == "testing":
+        return UnifiedSettings.for_testing()
+    if env == "development":
+        return UnifiedSettings.for_development()
+    return UnifiedSettings()
