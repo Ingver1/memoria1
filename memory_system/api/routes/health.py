@@ -76,7 +76,7 @@ async def health_method_not_allowed() -> Response:
 @router.get("/health/live", summary="Liveness probe")
 async def liveness_probe() -> Dict[str, str]:
     """Simple liveness probe endpoint (always returns alive if reachable)."""
-      return {"status": "alive", "timestamp": datetime.now(UTC).isoformat()}
+    return {"status": "alive", "timestamp": datetime.now(UTC).isoformat()}
 
 
 @router.get("/health/ready", summary="Readiness probe")
