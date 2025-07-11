@@ -34,7 +34,7 @@ class MemoryBase(BaseModel):
         description="Strength of emotional reaction",
     )
 
-def __init__(self, **data: Any) -> None:
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         if not self.text or len(self.text) > 10_000:
             raise ValueError("text must be between 1 and 10000 characters")
@@ -45,7 +45,9 @@ def __init__(self, **data: Any) -> None:
         if not -1.0 <= self.valence <= 1.0:
             raise ValueError("valence must be between -1 and 1")
         if not 0.0 <= self.emotional_intensity <= 1.0:
-            raise ValueError("emotional_intensity must be between 0 and 1")
+            raise ValueError(
+                "emotional_intensity must be between 0 and 1"
+            )
 
 
 class MemoryCreate(MemoryBase):
@@ -94,7 +96,7 @@ class MemoryQuery(BaseModel):
         False, description="Return raw vector embeddings in the response"
     )
 
-def __init__(self, **data: Any) -> None:
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         if not self.query or len(self.query) > 1_000:
             raise ValueError("query must be between 1 and 1000 characters")
