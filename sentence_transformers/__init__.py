@@ -5,9 +5,11 @@ import numpy as np
 
 
 class SentenceTransformer:
-    """Minimal stub of SentenceTransformer for offline testing."""
+    """Minimal stub of :class:`SentenceTransformer` for offline tests."""
 
     def __init__(self, model_name: str) -> None:
+        if model_name != "all-MiniLM-L6-v2":
+            raise ValueError(f"model {model_name} not found")
         self.model_name = model_name
         self._dim = 384
 
@@ -32,4 +34,4 @@ class SentenceTransformer:
             if norm_val != 0:
                 arr = arr / norm_val
             vectors.append(list(arr))
-        return np.ndarray(vectors)
+        return np.array(vectors, dtype=np.float32)
