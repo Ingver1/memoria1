@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import cast
 
 from fastapi import APIRouter, status
+from starlette.responses import Response
 from memory_system.api.middleware import MaintenanceModeMiddleware
 from starlette.types import ASGIApp
 
@@ -34,6 +35,7 @@ async def maintenance_status(
 async def enable_maintenance(mw: MaintenanceModeMiddleware | None = None) -> None:
     """Switch maintenance mode **on** (returns 204 No Content on success)."""
     (mw or MaintenanceModeMiddleware(cast(ASGIApp, None))).enable()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(
@@ -44,3 +46,4 @@ async def enable_maintenance(mw: MaintenanceModeMiddleware | None = None) -> Non
 async def disable_maintenance(mw: MaintenanceModeMiddleware | None = None) -> None:
     """Switch maintenance mode **off** and restore normal operation."""
     (mw or MaintenanceModeMiddleware(cast(ASGIApp, None))).disable()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
