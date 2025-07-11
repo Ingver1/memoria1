@@ -158,12 +158,20 @@ class EmbeddingService:
                 vectors = self._encode_direct(texts)  # synchronous call
                 for job, vec in zip(batch, vectors, strict=False):
                     if not job.future.done():
-                        job.future.set_result(vec)
+                        loop = job.future.get_loop()
+                        loop.call_soon_threadsafe(
+                            job.future.set_result,
+                            np.ndarray(vec),
+                        )
             except Exception as exc:
                 MET_ERRORS_TOTAL.labels(type="embedding", component="batch_loop").inc()
                 for job in batch:
                     if not job.future.done():
-                        job.future.set_exception(EmbeddingError(str(exc)))
+                        loop = job.future.get_loop()
+                        loop.call_soon_threadsafe(
+                            job.future.set_exception,
+                            EmbeddingError(str(exc)),
+                        )
         log.debug("Batch processor loop exited")
 
     # Public API
@@ -181,6 +189,8 @@ class EmbeddingService:
 
     async def _encode_single(self, text: str) -> np.ndarray:
         """Encode a single string into a 1 x dim embedding vector (as numpy array)."""
+        if not text:
+            raise ValueError("text must not be empty")
         # Attempt cache lookup first
         key = self._cache_key(text)
         cached = self.cache.get(key)
