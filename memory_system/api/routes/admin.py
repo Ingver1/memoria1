@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import cast
 
 from fastapi import APIRouter, status
-from starlette.responses import Response
 from memory_system.api.middleware import MaintenanceModeMiddleware
+from starlette.responses import Response
 from starlette.types import ASGIApp
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
