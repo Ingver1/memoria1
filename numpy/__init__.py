@@ -69,6 +69,16 @@ class ndarray(list[Any]):
             return ndarray([flat])
         raise NotImplementedError
 
+    def flatten(self) -> "ndarray":
+        """Return a copy of the array collapsed into one dimension."""
+        flat: list[Any] = []
+        for x in self:
+            if isinstance(x, list):
+                flat.extend(x)
+            else:
+                flat.append(x)
+        return ndarray(flat)
+        
     def __truediv__(self, other: float) -> "ndarray":
         result: list[Any] = []
         for x in self:
