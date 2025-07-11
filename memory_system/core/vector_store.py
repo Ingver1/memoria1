@@ -309,7 +309,7 @@ class VectorStore:
         with self._db_lock:
             self._conn.commit()
             self._conn.close()
-            self._file
+            self._file.close()
 
 
 # Backwards compatibility alias for asynchronous FAISS store
