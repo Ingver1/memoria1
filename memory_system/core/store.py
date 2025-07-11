@@ -16,7 +16,7 @@ import uuid
 from collections.abc import AsyncIterator
 
 # ───────────────────────── local imports ───────────────────────────
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, cast
 
@@ -38,7 +38,9 @@ class Memory:
 
     id: str
     text: str
-    created_at: dt.datetime
+    created_at: dt.datetime = field(
+        default_factory=lambda: dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc)
+    )
     importance: float = 0.0  # 0..1
     valence: float = 0.0  # -1..1 emotional polarity
     emotional_intensity: float = 0.0  # 0..1 strength of emotion
@@ -89,10 +91,19 @@ class SQLiteMemoryStore:
     );
     """
 
-    def __init__(self, dsn: str = "file:memories.db?mode=rwc", *, pool_size: int = 5) -> None:
-        self._dsn = dsn
+    def __init__(self, dsn: str | Path = "file:memories.db?mode=rwc", *, pool_size: int = 5) -> None:
+        if isinstance(dsn, Path):
+            self._path = dsn
+            self._dsn = f"file:{dsn}?mode=rwc"
+        else:
+            self._dsn = dsn
+            path_str = dsn[5:].split("?", 1)[0] if dsn.startswith("file:") else dsn
+            self._path = Path(path_str)
+        self._path.parent.mkdir(parents=True, exist_ok=True)
         self._pool_size = pool_size
         self._pool: asyncio.LifoQueue[aiosqlite.Connection] = asyncio.LifoQueue(maxsize=pool_size)
+        self._conn = object()  # placeholder for tests
+        self._loop = asyncio.get_event_loop()
         self._initialised: bool = False
         self._lock = asyncio.Lock()  # protects initialisation & pool resize
         self._created = 0  # number of currently open connections
@@ -146,7 +157,11 @@ class SQLiteMemoryStore:
             conn = await self._pool.get()
             await conn.close()
             self._created = 0
-
+            
+            async def close(self) -> None:
+        """Compatibility alias for ``aclose`` used in tests."""
+        await self.aclose()
+        
    # -------------------------------------
     async def add(self, mem: Memory) -> None:
         await self.initialise()
