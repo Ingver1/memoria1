@@ -92,7 +92,7 @@ class FaissHNSWIndex:
 
         self._stats = IndexStats(dim=dim)
         # simple in-memory cache for repeated queries
-        self._cache: dict[tuple[float, ...] | tuple, tuple[list[str], list[float]]] = {}
+        self._cache: dict[tuple[tuple[float, ...], int, int], tuple[list[str], list[float]]] = {}
         log.info("FAISS HNSW index initialised: dim=%d, metric=%s", dim, space)
 
     # ─────────────────────── Helpers ────────────────────────
