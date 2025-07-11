@@ -7,8 +7,13 @@ import random as _random
 import struct
 from typing import Any, Iterable, List, Sequence
 
-float32 = float
-float64 = float
+
+class float32(float):
+    pass
+
+
+class float64(float):
+    pass
 uint8 = int
 floating = float
 
