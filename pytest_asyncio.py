@@ -24,7 +24,7 @@ def pytest_pyfunc_call(pyfuncitem):
 @pytest.hookimpl(tryfirst=True)
 def pytest_fixture_setup(fixturedef, request):
     func = fixturedef.func
-    if inspect.iscoroutinefunction(func):
+    if inspect.iscoroutinefunction(func) or inspect.isasyncgenfunction(func):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         params = {name: request.getfixturevalue(name) for name in fixturedef.argnames}
