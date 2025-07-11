@@ -412,7 +412,7 @@ class SecureTokenManager:
         except Exception as exc:
             raise SecurityError("Invalid token") from exc
 
-def generate_token(
+    def generate_token(
         self,
         user_id: str,
         *,
