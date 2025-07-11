@@ -268,16 +268,20 @@ class VectorStore:
             self._conn.commit()
 
     def get_vector(self, vector_id: str) -> np.ndarray:
+        """Return the stored vector for ``vector_id``."""
         with self._db_lock:
-            if self._conn.execute("SELECT 1 FROM vectors WHERE id=?", (vector_id,)).fetchone():
-                raise ValidationError("duplicate id")
-            arr = self._validate_vector(vector)
-            self._file.seek(0, os.SEEK_END)
-            offset = self._file.tell()
-            buf = _array.array("f", [float(x) for x in arr])
-            self._file.write(buf.tobytes())
-            self._conn.execute("INSERT INTO vectors (id, offset) VALUES (?, ?)", (vector_id, offset))
-            self._conn.commit()
+            row = self._conn.execute(
+                "SELECT offset FROM vectors WHERE id=?",
+                (vector_id,),
+            ).fetchone()
+            if row is None:
+                raise StorageError("Vector not found")
+            offset = row[0]
+            self._file.seek(offset)
+            buf = self._file.read(self._dim * 4)
+            arr = _array.array("f")
+            arr.frombytes(buf)
+            return np.asarray(arr, dtype=np.float32)
 
     def remove_vector(self, vector_id: str) -> None:
         with self._db_lock:
