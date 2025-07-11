@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Optional, cast
 
 from fastapi.testclient import TestClient
@@ -35,7 +36,12 @@ class AsyncClient:
 
     async def __aenter__(self) -> "AsyncClient":
         self._client = TestClient(cast(Any, self._app), base_url=self._base_url)
-        self._client.__enter__()
+        try:
+            asyncio.get_running_loop()
+            await self._client._startup()
+        except RuntimeError:
+            # No running loop, fall back to synchronous context manager
+            self._client.__enter__()
         return self
 
     async def __aexit__(
@@ -45,19 +51,23 @@ class AsyncClient:
         tb: Any | None,
     ) -> None:
         if self._client:
-            self._client.__exit__(exc_type, exc, tb)
+            try:
+                asyncio.get_running_loop()
+                await self._client._shutdown()
+            except RuntimeError:
+                self._client.__exit__(exc_type, exc, tb)
 
     async def get(self, url: str, **kwargs: Any) -> Response:
         assert self._client is not None
-        resp = self._client.get(url, **kwargs)
+        resp = await asyncio.to_thread(self._client.get, url, **kwargs)
         return Response(resp)
 
     async def post(self, url: str, **kwargs: Any) -> Response:
         assert self._client is not None
-        resp = self._client.post(url, **kwargs)
+        resp = await asyncio.to_thread(self._client.post, url, **kwargs)
         return Response(resp)
 
     async def delete(self, url: str, **kwargs: Any) -> Response:
         assert self._client is not None
-        resp = self._client.delete(url, **kwargs)
+        resp = await asyncio.to_thread(self._client.delete, url, **kwargs)
         return Response(resp)
