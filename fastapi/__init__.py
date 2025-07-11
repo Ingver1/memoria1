@@ -35,6 +35,8 @@ class FastAPI:
     ) -> None:
         from types import SimpleNamespace
 
+        self.title = kwargs.get("title", "")
+        self.version = kwargs.get("version", "")
         self.state = SimpleNamespace()
         self.dependency_overrides: dict[Any, Any] = {}
         self.routes: list[tuple[str, str, Callable[..., Any]]] = []
@@ -74,7 +76,8 @@ class FastAPI:
 
     def include_router(self, router: Any, *, prefix: str = "") -> None:
         for method, path, func in getattr(router, "routes", []):
-            self.routes.append((method, prefix + path, func))
+            full = prefix + getattr(router, "prefix", "") + path
+            self.routes.append((method, full, func))
 
     def mount(self, path: str, app: Any) -> None:
         self.routes.append(("MOUNT", path, app))
@@ -87,21 +90,21 @@ class APIRouter:
 
     def get(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
         def decorator(func: F) -> F:
-            self.routes.append(("GET", self.prefix + path, func))
+            self.routes.append(("GET", path, func))
             return func
 
         return decorator
 
     def post(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
         def decorator(func: F) -> F:
-            self.routes.append(("POST", self.prefix + path, func))
+            self.routes.append(("POST", path, func))
             return func
 
         return decorator
 
     def delete(self, path: str, *args: Any, **kwargs: Any) -> Callable[[F], F]:
         def decorator(func: F) -> F:
-            self.routes.append(("DELETE", self.prefix + path, func))
+            self.routes.append(("DELETE", path, func))
             return func
 
         return decorator
