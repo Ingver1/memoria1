@@ -13,7 +13,7 @@ class Fernet:
     def __init__(self, key: bytes | str) -> None:
         if isinstance(key, str):
             key = key.encode()
-            try:
+        try:
             decoded = base64.urlsafe_b64decode(key)
         except Exception as exc:  # pragma: no cover - invalid base64
             raise ValueError("Invalid encryption key") from exc
