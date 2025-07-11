@@ -46,6 +46,18 @@ class Memory:
     emotional_intensity: float = 0.0  # 0..1 strength of emotion
     metadata: Dict[str, Any] | None = None
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Memory):
+            return NotImplemented
+        return (
+            self.id == other.id
+            and self.text == other.text
+            and self.importance == other.importance
+            and self.valence == other.valence
+            and self.emotional_intensity == other.emotional_intensity
+            and self.metadata == other.metadata
+        )
+        
     @staticmethod
     def new(
         text: str,
@@ -103,7 +115,10 @@ class SQLiteMemoryStore:
         self._pool_size = pool_size
         self._pool: asyncio.LifoQueue[aiosqlite.Connection] = asyncio.LifoQueue(maxsize=pool_size)
         self._conn = object()  # placeholder for tests
-        self._loop = asyncio.get_event_loop()
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:  # no running loop
+            self._loop = asyncio.new_event_loop()
         self._initialised: bool = False
         self._lock = asyncio.Lock()  # protects initialisation & pool resize
         self._created = 0  # number of currently open connections
