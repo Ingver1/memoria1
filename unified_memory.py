@@ -181,7 +181,7 @@ async def add(
         modality=modality,
         connections=dict(connections) if connections else None,
         metadata=dict(metadata) if metadata else {},
-        created_at=_dt.datetime.utcnow(),
+        created_at=_dt.datetime.now(_dt.timezone.utc),
     )
 
     st = await _resolve_store(store)
@@ -256,7 +256,7 @@ async def reinforce(
     """Reinforce the importance of a memory by *amount* and return the updated object."""
 
     st = await _resolve_store(store)
-    meta = {"importance_delta": amount, "last_accessed": _dt.datetime.utcnow().isoformat()}
+    meta = {"importance_delta": amount, "last_accessed": _dt.datetime.now(_dt.timezone.utc).isoformat()}
     updated = await asyncio.wait_for(
         st.update_memory(memory_id, metadata=meta), timeout=ASYNC_TIMEOUT
     )
