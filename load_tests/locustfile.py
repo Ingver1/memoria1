@@ -2,8 +2,10 @@
 Locust load-test for FastAPI /search & /add endpoints.
 Run with: locust -f load_tests/locustfile.py --host http://localhost:8000
 """
-from locust import HttpUser, task, between
 import random
+
+from locust import HttpUser, between, task
+
 import numpy as np
 
 DIM = 384  # keep in sync with settings.model.vector_dim
