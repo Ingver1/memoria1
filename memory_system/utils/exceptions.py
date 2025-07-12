@@ -52,7 +52,7 @@ class MemorySystemError(RuntimeError):
         self.message: str = message
         self.context: dict[str, Any] = context or {}
         self.code: str = self.default_code
-        self.ts_utc: dt.datetime = dt.datetime.utcnow()
+        self.ts_utc: dt.datetime = dt.datetime.now(dt.timezone.utc)
         if cause is not None:
             self.__cause__ = cause  # built-in exception chaining
 
