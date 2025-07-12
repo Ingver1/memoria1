@@ -198,6 +198,7 @@ class EmbeddingService:
             # Return cached embedding, ensure shape (1, dim)
             return cast(np.ndarray, cached).reshape(1, -1)
         # Not in cache: enqueue for batch processing
+        await asyncio.sleep(0.001)
         loop = asyncio.get_event_loop()
         future: asyncio.Future[np.ndarray] = loop.create_future()
         job = EmbeddingJob(text=text, future=future)
