@@ -2,6 +2,8 @@
 Runs a benchmark and fails CI if performance regresses >10 %
 vs. the stored baseline (pytest-benchmark handles comparison).
 """
+import asyncio
+
 import pytest
 
 import numpy as np
@@ -21,10 +23,9 @@ async def bench_store():
     await s.close()
 
 
-@pytest.mark.asyncio
 @pytest.mark.perf
 def test_semantic_search_speed(benchmark, bench_store):
-    async def run():
-        await bench_store.semantic_search(vector=VECTOR, k=5)
-
-    benchmark(bench_store.loop.run_until_complete, run)
+    loop = asyncio.get_event_loop()
+    benchmark(lambda: loop.run_until_complete(
+        bench_store.semantic_search(vector=VECTOR, k=5)
+    ))
