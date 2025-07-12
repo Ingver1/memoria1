@@ -25,26 +25,26 @@ async def _store(request: Request) -> SQLiteMemoryStore:
 async def create_memory(
     payload: MemoryCreate,
     request: Request,
-) -> MemoryRead:
+) -> JSONResponse:
     store = await _store(request)
     pii_filter = EnhancedPIIFilter()
     clean_text, _found, _types = pii_filter.redact(payload.text)
     mem = Memory(
         id=str(uuid.uuid4()),
         text=clean_text,
-    metadata={"tags": payload.tags, "role": payload.role, "user_id": payload.user_id},
+        metadata={"tags": payload.tags, "role": payload.role, "user_id": payload.user_id},
     )
     await store.add(mem)
     log.info("Created memory %s", mem.id)
-    payload = MemoryRead.model_validate(asdict(mem))
-    return JSONResponse(payload.model_dump(), status_code=201)
+    mem_read = MemoryRead.model_validate(asdict(mem))
+    return JSONResponse(mem_read.model_dump(), status_code=201)
 
 
 @router.get("/", response_model=list[MemoryRead])
 async def list_memories(
     request: Request,
     user_id: str | None = Query(None),
-) -> List[MemoryRead]:
+) -> JSONResponse:
     store = await _store(request)
     records = await store.search(metadata_filters={"user_id": user_id} if user_id else None)
     payload = [MemoryRead.model_validate(asdict(r)).model_dump() for r in records]
@@ -55,7 +55,7 @@ async def list_memories(
 async def search_memories(
     query: MemoryQuery,
     request: Request,
-) -> List[MemorySearchResult]:
+) -> JSONResponse:
     if not query.query:
         raise HTTPException(status_code=422, detail="Query must not be empty")
     store = await _store(request)
@@ -65,7 +65,7 @@ async def search_memories(
 
 
 @router.get("/best", response_model=list[MemoryRead])
-async def best_memories(request: Request, limit: int = Query(5, ge=1, le=50)) -> List[MemoryRead]:
+async def best_memories(request: Request, limit: int = Query(5, ge=1, le=50)) -> JSONResponse:
     store = await _store(request)
     records = await store.list_recent(n=limit)
     payload = [MemoryRead.model_validate(asdict(r)).model_dump() for r in records]
