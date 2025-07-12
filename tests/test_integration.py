@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 import httpx
-from fastapi.testclient import TestClient
+from fastapi.testclient import ClientHelper
 from memory_system.api.app import create_app
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.embedding import EnhancedEmbeddingService
@@ -331,7 +331,7 @@ class TestAPIIntegration:
     @pytest.fixture
     def client(self, test_app):
         """Create test client."""
-        return TestClient(test_app)
+        return ClientHelper(test_app)
 
     @pytest.fixture
     async def async_client(self, test_app):
