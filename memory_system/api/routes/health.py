@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, status
+from memory_system.api.dependencies import get_memory_store
 from memory_system.api.middleware import check_dependencies, session_tracker
 from memory_system.api.schemas import HealthResponse, StatsResponse
 from memory_system.config.settings import UnifiedSettings, get_settings
@@ -25,7 +26,7 @@ router = APIRouter(tags=["Health & Monitoring"])
 
 async def _store() -> EnhancedMemoryStore:
     """Dependency to get the global EnhancedMemoryStore (async)."""
-    return EnhancedMemoryStore(UnifiedSettings())
+    return get_memory_store()
     
 
 def _settings() -> UnifiedSettings:
@@ -54,7 +55,7 @@ async def root() -> Dict[str, Any]:
 
 
 @router.get("/health", summary="Full health check")
-async def health_check() -> Dict[str, Any]:
+async def health_check() -> Response:
     """Return basic health information including component checks."""
     store = await _store()
     component = await store.get_health()
@@ -67,7 +68,10 @@ async def health_check() -> Dict[str, Any]:
         memory_store_health={"uptime": component.uptime},
         api_enabled=True,
     )
-    return payload.model_dump()
+    status_code = 200 if component.healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+    data = payload.model_dump()
+    data["healthy"] = component.healthy
+    return Response(data, status_code=status_code)
 
 @router.post("/health")
 async def health_method_not_allowed() -> Response:
