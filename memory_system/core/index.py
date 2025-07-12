@@ -45,7 +45,7 @@ _QUERY_ERR = prometheus_counter("ums_ann_query_errors_total", "Errors while quer
 # ────────────────────────── Exceptions ───────────────────────────
 
 
-class ANNIndexError(StorageError):
+class ANNIndexError(StorageError, ValueError):
     """Raised for duplicate IDs, dimension mismatch, or internal FAISS errors."""
 
 
@@ -126,12 +126,12 @@ class FaissHNSWIndex:
 
         dup = [item for item, cnt in Counter(ids).items() if cnt > 1]
         if dup:
-            raise ANNIndexError(f"duplicate IDs in input: {dup[:3]}…")
+            raise ANNIndexError("duplicate IDs in input")
 
         with self._lock:
             existing = {i for i in ids if i in self._reverse_id_map}
             if existing:
-                raise ANNIndexError(f"IDs already present: {list(existing)[:3]}…")
+                raise ANNIndexError("IDs already present")
 
             vecs = self._to_float32(np.asarray(vectors))
             if self.space == "cosine":
