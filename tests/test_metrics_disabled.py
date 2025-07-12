@@ -4,8 +4,8 @@ If metrics are disabled, the service must return 404/403
 and must not output Prometheus formatted data.
 """
 import pytest
-from fastapi.testclient import TestClient
 
+from fastapi.testclient import TestClient
 from memory_system.api.app import create_app
 from memory_system.config.settings import UnifiedSettings
 
