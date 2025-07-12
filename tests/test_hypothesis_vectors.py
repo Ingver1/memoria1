@@ -5,10 +5,10 @@ The goal: whatever random float32 vector we add must be retrievable
 via an exact semantic search; the store must never raise or lose data.
 """
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
 
 import numpy as np
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.enhanced_store import EnhancedMemoryStore
 
