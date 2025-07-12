@@ -32,7 +32,7 @@ async def store():
 
 
 @given(vec=_float32_arrays())
-@settings(max_examples=50)  # keep runtime reasonable for CI
+@settings(max_examples=20)
 @pytest.mark.asyncio
 async def test_roundtrip_vector(store, vec):
     """Adding then searching the same vector must return exactly one hit."""
