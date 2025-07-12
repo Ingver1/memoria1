@@ -242,7 +242,7 @@ class TestEmbeddingJob:
 
     def test_embedding_job_creation(self):
         """Test EmbeddingJob creation."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         future = loop.create_future()
         job = EmbeddingJob(text="test text", future=future)
         assert job.text == "test text"
@@ -250,7 +250,7 @@ class TestEmbeddingJob:
 
     def test_embedding_job_immutable(self):
         """Test that EmbeddingJob is immutable."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         future = loop.create_future()
         job = EmbeddingJob(text="test text", future=future)
 
