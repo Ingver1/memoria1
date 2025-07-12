@@ -20,7 +20,7 @@ def pytest_collection_modifyitems(config, items):
         if inspect.iscoroutinefunction(test_fn):
             item.add_marker(pytest.mark.asyncio)
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import ClientHelper
 from memory_system.api.app import create_app
 
 # Set test environment variables
@@ -55,7 +55,7 @@ def test_app(test_settings):
 @pytest.fixture
 def test_client(test_app):
     """HTTP client for API tests."""
-    return TestClient(test_app)
+    return ClientHelper(test_app)
 
 
 @pytest.fixture
