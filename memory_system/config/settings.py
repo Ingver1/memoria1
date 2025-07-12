@@ -6,6 +6,7 @@ import json
 import logging.config
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -84,6 +85,8 @@ class SecurityConfig(BaseModel):
             )
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
+        if name == "encrypt_at_rest" and value and not getattr(self, "encryption_key", ""):
+            object.__setattr__(self, "encryption_key", Fernet.generate_key().decode())
         super().__setattr__(name, value)
 
     @field_validator("encryption_key")
@@ -180,15 +183,13 @@ class MonitoringConfig(BaseModel):
     health_check_interval: PositiveInt = 30
     log_level: str = "INFO"
 
-    model_config = {"frozen": True}
+    model_config = {"frozen": False}
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self._validate_prom_port(self.prom_port)
 
     def __setattr__(self, name: str, value: Any) -> None:  # pragma: no cover
-        if name in self.__dict__ and self.model_config.get("frozen"):
-            raise ValidationError("MonitoringConfig is immutable")
         super().__setattr__(name, value)
 
     @field_validator("prom_port")
@@ -261,6 +262,7 @@ class UnifiedSettings(BaseSettings):
         object.__setattr__(self.database, "db_path", fixed[0])
         object.__setattr__(self.database, "vec_path", fixed[1])
         object.__setattr__(self.database, "cache_path", fixed[2])
+        object.__setattr__(self, "storage", SimpleNamespace(database_url=self.get_database_url())) 
 
     @classmethod
     def for_testing(cls) -> "UnifiedSettings":
@@ -323,12 +325,13 @@ class UnifiedSettings(BaseSettings):
 
     def save_to_file(self, path: Path) -> None:
         with open(path, "w", encoding="utf-8") as f:
-            json.dump(self.model_dump(), f, indent=2)
+            json.dump(self.model_dump(exclude={"storage"}), f, indent=2
 
     @classmethod
     def load_from_file(cls, path: Path) -> "UnifiedSettings":
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
+            data.pop("storage", None)
         return cls(**data)
 
 
