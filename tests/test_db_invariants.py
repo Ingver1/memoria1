@@ -3,9 +3,10 @@ Ensures DB columns obey NOT NULL + dimension constraints after inserts.
 Works with SQLite or SQLCipher.
 """
 import pytest
+
 import numpy as np
-from memory_system.core.enhanced_store import EnhancedMemoryStore
 from memory_system.config.settings import UnifiedSettings
+from memory_system.core.enhanced_store import EnhancedMemoryStore
 
 DIM = UnifiedSettings.for_testing().model.vector_dim
 
