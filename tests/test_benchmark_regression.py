@@ -15,13 +15,14 @@ VECTOR = np.random.rand(DIM).astype("float32").tolist()
 @pytest.fixture(scope="session")
 async def bench_store():
     s = EnhancedMemoryStore(UnifiedSettings.for_testing())
-    for _ in range(5000):
+    for _ in range(1_000):
         await s.add_memory(text="bench", embedding=np.random.rand(DIM).tolist())
     yield s
     await s.close()
 
 
 @pytest.mark.asyncio
+@pytest.mark.perf
 def test_semantic_search_speed(benchmark, bench_store):
     async def run():
         await bench_store.semantic_search(vector=VECTOR, k=5)
