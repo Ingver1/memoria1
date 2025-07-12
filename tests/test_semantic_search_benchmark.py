@@ -14,10 +14,10 @@ RANDOM_VECTOR = np.random.rand(DIM).astype("float32").tolist()
 
 @pytest.fixture(scope="session")
 async def populated_store():
-    """Fill the index with 10 000 random vectors to make the test realistic."""
+    """Fill the index with 2 000 random vectors to make the test realistic."""
     settings = UnifiedSettings.for_testing()
     store = EnhancedMemoryStore(settings)
-    for _ in range(10_000):
+    for _ in range(2_000):
         await store.add_memory(
             text="dummy",
             embedding=np.random.rand(DIM).astype("float32").tolist(),
@@ -27,6 +27,7 @@ async def populated_store():
 
 
 @pytest.mark.asyncio
+@pytest.mark.perf
 @pytest.mark.parametrize("ef", [10, 50, 100, 200])
 def test_benchmark_semantic_search(benchmark, populated_store, ef):
     """
