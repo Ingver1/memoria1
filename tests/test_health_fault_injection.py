@@ -3,8 +3,8 @@ If the ANN index is missing, the service should degrade gracefully,
 reporting unhealthy status and returning 503 on /health.
 """
 import pytest
-from fastapi.testclient import TestClient
 
+from fastapi.testclient import TestClient
 from memory_system.api.app import create_app
 from memory_system.config.settings import UnifiedSettings
 
