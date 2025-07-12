@@ -7,7 +7,7 @@ import pytest
 
 import httpx
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from fastapi.testclient import ClientHelper
 from memory_system.api.app import create_app
 from memory_system.api.schemas import (
     ErrorResponse,
@@ -38,7 +38,7 @@ def test_app(test_settings):
 @pytest.fixture
 def test_client(test_app):
     """Create test client."""
-    return TestClient(test_app)
+    return ClientHelper(test_app)
 
 
 @pytest.fixture
