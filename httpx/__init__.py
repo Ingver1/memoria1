@@ -2,7 +2,7 @@ import asyncio
 from types import TracebackType
 from typing import Any, Optional, cast
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import ClientHelper
 
 
 class _AsyncLock:
@@ -50,12 +50,12 @@ class AsyncClient:
     def __init__(self, app: Any | None = None, base_url: str = "http://test", timeout: float | None = None) -> None:
         self._app = app
         self._base_url = base_url
-        self._client: Optional[TestClient] = None
+        self._client: Optional[ClientHelper] = None
         self._timeout = timeout
         self._lock = _AsyncLock()
 
     async def __aenter__(self) -> "AsyncClient":
-        self._client = TestClient(cast(Any, self._app), base_url=self._base_url)
+        self._client = ClientHelper(cast(Any, self._app), base_url=self._base_url)
         try:
             asyncio.get_running_loop()
             await self._client._startup()
