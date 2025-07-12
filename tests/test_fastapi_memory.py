@@ -59,3 +59,18 @@ def test_best_memories_endpoint(app):
         resp = client.get("/api/v1/memory/best", params={"limit": 2})
         assert resp.status_code == 200
         assert len(resp.json()) == 2
+
+
+def test_long_text_validation(app):
+    """Memory creation with too long text should fail with 422."""
+    with ClientHelper(app) as client:
+        payload = {"text": "x" * 10001}
+        resp = client.post("/api/v1/memory/", json=payload)
+        assert resp.status_code == 422
+
+
+def test_search_invalid_top_k(app):
+    """Search with invalid top_k should return 422."""
+    with ClientHelper(app) as client:
+        resp = client.post("/api/v1/memory/search", json={"query": "hi", "top_k": 0})
+        assert resp.status_code == 422
