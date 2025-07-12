@@ -282,12 +282,14 @@ class _Random:
         else:
             raise NotImplementedError
 
-@staticmethod
+    @staticmethod
     def default_rng(seed: int | None = None) -> "_Random":
         if seed is not None:
             _random.seed(seed)
         return _Random()
-        
+
+default_rng = _Random.default_rng
+
 random = _Random()
 
 class _Testing:
