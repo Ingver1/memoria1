@@ -1,4 +1,5 @@
 import asyncio
+from types import TracebackType
 from typing import Any, Optional, cast
 
 from fastapi.testclient import TestClient
@@ -13,7 +14,12 @@ class _AsyncLock:
     async def __aenter__(self) -> None:
         await self._lock.acquire()
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:  # noqa: ANN001, D401
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         self._lock.release()
 
 
