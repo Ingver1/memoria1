@@ -47,7 +47,13 @@ jobs:
         run: mypy memory_system
 
       - name: Run tests
-        run: pytest -q
+        run: pytest -q -m "not perf"
+
+  # optional nightly job
+  # schedule:
+  #   - cron: '0 3 * * *'
+  #   steps:
+  #     - run: pytest -q -m perf
 
   docker-build-publish:
     name: Build & Publish Docker image
