@@ -384,7 +384,7 @@ class TestAPIIntegration:
         for response in responses:
             assert response.status_code == 200
             data = response.json()
-            assert data["version"] == "0.8.0a0
+            assert data["version"] == "0.8.0a0"
 
     def test_api_error_handling_integration(self, client):
         """Test API error handling integration."""
