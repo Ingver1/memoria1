@@ -26,6 +26,7 @@ from memory_system.config.settings import (
 from memory_system.core.store import SQLiteMemoryStore, get_memory_store, get_store
 from memory_system.memory_helpers import MemoryStoreProtocol, add, delete, search
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from starlette.responses import Response
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,10 @@ def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: n
     @app.get("/")
     async def service_root() -> dict[str, Any]:
         return await health_routes.root()
+        
+            @app.get("/health")
+    async def health_alias() -> Response:
+        return await health_routes.health_check()
         
     # Metrics ---------------------------------------------------------------
     if settings.monitoring.enable_metrics:
