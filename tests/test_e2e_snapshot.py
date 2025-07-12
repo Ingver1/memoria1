@@ -2,9 +2,8 @@
 Adds a memory through REST, retrieves it, asserts round-trip integrity.
 Uses TestClient instead of HTTPX to stay in-process and fast.
 """
-from fastapi.testclient import TestClient
 import numpy as np
-
+from fastapi.testclient import TestClient
 from memory_system.api.app import create_app
 from memory_system.config.settings import UnifiedSettings
 
