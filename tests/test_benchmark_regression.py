@@ -2,10 +2,11 @@
 Runs a benchmark and fails CI if performance regresses >10 %
 vs. the stored baseline (pytest-benchmark handles comparison).
 """
-import numpy as np
 import pytest
-from memory_system.core.enhanced_store import EnhancedMemoryStore
+
+import numpy as np
 from memory_system.config.settings import UnifiedSettings
+from memory_system.core.enhanced_store import EnhancedMemoryStore
 
 DIM = UnifiedSettings.for_testing().model.vector_dim
 VECTOR = np.random.rand(DIM).astype("float32").tolist()
