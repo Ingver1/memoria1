@@ -61,7 +61,18 @@ uvicorn app:create_app --host 0.0.0.0 --port 8000 --reload
 # 4 ) open docs
 open http://localhost:8000/docs    # Swagger UI
 
+---
 
+### Environment Variables
+
+UnifiedSettings reads configuration from variables prefixed with `AI_`. Copy
+`.env.example` to `.env` and adjust values as needed:
+
+- `AI_DATABASE__DB_PATH=./data/memory.db`
+- `AI_SECURITY__API_TOKEN=super-secret-token`
+- `AI_MODEL__MODEL_NAME=all-MiniLM-L6-v2`
+- `AI_PERFORMANCE__MAX_WORKERS=4`
+- `AI_MONITORING__PROM_PORT=9100`
 ---
 
 API Examples
