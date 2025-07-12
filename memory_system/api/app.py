@@ -124,8 +124,8 @@ def create_app(settings: UnifiedSettings | None = None) -> FastAPI:  # pragma: n
     @app.get("/")
     async def service_root() -> dict[str, Any]:
         return await health_routes.root()
-        
-            @app.get("/health")
+
+    @app.get("/health")
     async def health_alias() -> Response:
         return await health_routes.health_check()
         
