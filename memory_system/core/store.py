@@ -108,8 +108,22 @@ class SQLiteMemoryStore:
             self._path = dsn
             self._dsn = f"file:{dsn}?mode=rwc"
         else:
-            self._dsn = dsn
-            path_str = dsn[5:].split("?", 1)[0] if dsn.startswith("file:") else dsn
+            if dsn.startswith("sqlite+sqlcipher:///"):
+                path_part = dsn.split("sqlite+sqlcipher:///", 1)[1]
+                self._dsn = f"file:{path_part}?mode=rwc"
+                path_str = path_part
+            elif dsn.startswith("sqlite:///"):
+                path_part = dsn.split("sqlite:///", 1)[1]
+                self._dsn = f"file:{path_part}?mode=rwc"
+                path_str = path_part
+            else:
+                self._dsn = dsn
+                if dsn.startswith("file:"):
+                    path_str = dsn[5:].split("?", 1)[0]
+                elif "://" in dsn:
+                    path_str = dsn.split("://", 1)[1].split("?", 1)[0]
+                else:
+                    path_str = dsn
             self._path = Path(path_str)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._pool_size = pool_size
