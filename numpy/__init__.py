@@ -9,7 +9,7 @@ from typing import Any, Iterable, List, Sequence
 
 
 class float32(float):
-    def __new__(cls, value: Any = 0.0):
+    def __new__(cls, value: Any = 0.0) -> Any:
         if isinstance(value, (list, ndarray)):
             return ndarray(value, dtype=float32)
         return float.__new__(cls, float(value))
