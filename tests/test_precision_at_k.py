@@ -2,10 +2,11 @@
 Evaluates semantic_search precision@k with simple synthetic neighbours.
 Goal: at least 0.8 precision when querying near-identical vectors.
 """
-import numpy as np
 import pytest
-from memory_system.core.enhanced_store import EnhancedMemoryStore
+
+import numpy as np
 from memory_system.config.settings import UnifiedSettings
+from memory_system.core.enhanced_store import EnhancedMemoryStore
 
 DIM = UnifiedSettings.for_testing().model.vector_dim
 
