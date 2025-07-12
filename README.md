@@ -113,6 +113,10 @@ Development & Testing
 # run unit + integration tests
 pytest -q
 
+If tests fail with ``async def functions are not natively supported`` make sure
+the bundled ``pytest_asyncio`` plugin is discovered or install
+``pytest-asyncio``.
+
 # build & start containerised dev stack
 docker compose up --build
 
