@@ -52,7 +52,7 @@ class BaseModel:
             return cls(**data)
         raise ValidationError("Invalid data")
 
-    def model_dump(self, *, mode: str | None = None) -> dict[str, Any]:
+    def model_dump(self, *, mode: str | None = None, exclude: set[str] | None = None) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for key, value in self.__dict__.items():
             if isinstance(value, BaseModel):
@@ -61,6 +61,9 @@ class BaseModel:
                 result[key] = str(value)
             else:
                 result[key] = value
+                if exclude:
+            for field in exclude:
+                result.pop(field, None)
         return result
 
     def model_dump_json(self, *, indent: int | None = None) -> str:
