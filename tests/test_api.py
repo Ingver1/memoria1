@@ -144,9 +144,9 @@ class TestHealthEndpoints:
 
     def test_metrics_endpoint_disabled(self, test_client, monkeypatch):
         """Test metrics endpoint when disabled."""
+        from fastapi import HTTPException
         from memory_system.api.routes import health as health_routes
         from memory_system.config.settings import UnifiedSettings
-        from fastapi import HTTPException
 
         # Override the settings dependency to disable metrics
         monkeypatch.setattr(
