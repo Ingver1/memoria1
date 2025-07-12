@@ -17,12 +17,13 @@ The class is thread‑safe because all state mutations are protected by a :class
 
 from __future__ import annotations
 
+import json
 import logging
 import os
-import uuid
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from threading import RLock
 from time import perf_counter
 
@@ -93,6 +94,8 @@ class FaissHNSWIndex:
         self._stats = IndexStats(dim=dim)
         # simple in-memory cache for repeated queries
         self._cache: dict[tuple[tuple[float, ...], int, int], tuple[list[str], list[float]]] = {}
+        self._id_map: dict[int, str] = {}
+        self._reverse_id_map: dict[str, int] = {}
         log.info("FAISS HNSW index initialised: dim=%d, metric=%s", dim, space)
 
     # ─────────────────────── Helpers ────────────────────────
@@ -100,13 +103,16 @@ class FaissHNSWIndex:
     def _to_float32(arr: NDArray) -> NDArray:
         return arr.astype(np.float32, copy=False)
 
-    @staticmethod
-    def _string_to_int(s: str) -> int:
-        return uuid.uuid5(uuid.NAMESPACE_URL, s).int >> 64  # 64‑bit hash
+def _string_to_int(self, s: str) -> int:
+        if s in self._reverse_id_map:
+            return self._reverse_id_map[s]
+        int_id = len(self._id_map) + 1
+        self._id_map[int_id] = s
+        self._reverse_id_map[s] = int_id
+        return int_id
 
-    @staticmethod
-    def _int_to_string(i: int) -> str:  # not reversible, demo only
-        return hex(int(i))
+    def _int_to_string(self, i: int) -> str:
+        return self._id_map.get(i, hex(int(i)))
 
     # ─────────────────────── Mutators ────────────────────────
     def add_vectors(self, ids: Sequence[str], vectors: NDArray) -> None:
@@ -123,7 +129,7 @@ class FaissHNSWIndex:
             raise ANNIndexError(f"duplicate IDs in input: {dup[:3]}…")
 
         with self._lock:
-            existing = {i for i in ids if self._string_to_int(i) in self.index.id_map}
+            existing = {i for i in ids if i in self._reverse_id_map}
             if existing:
                 raise ANNIndexError(f"IDs already present: {list(existing)[:3]}…")
 
@@ -147,6 +153,10 @@ class FaissHNSWIndex:
             _VEC_DELETED.inc(int(removed))
             log.debug("Removed %d vectors", removed)
             if removed:
+                for _id in int_ids:
+                    sid = self._id_map.pop(int(_id), None)
+                    if sid:
+                        self._reverse_id_map.pop(sid, None)
                 self._cache.clear()
 
     # ─────────────────────── Query ────────────────────────
@@ -194,7 +204,7 @@ class FaissHNSWIndex:
         ) / self._stats.total_queries
         _QUERY_CNT.inc()
 
-        ids = [self._int_to_string(i) for i in int_ids[0]]
+        ids = [self._int_to_string(int(i)) for i in int_ids[0]]
         dists = list(distances[0])
         self._cache[key] = (ids, dists)
         return ids, dists
@@ -206,6 +216,8 @@ class FaissHNSWIndex:
         temp.add_vectors(ids, vectors)
         with self._lock:
             self.index = temp.index
+            self._id_map = temp._id_map
+            self._reverse_id_map = temp._reverse_id_map
             self._stats.total_vectors = len(ids)
             self._stats.last_rebuild = perf_counter()
             self._cache.clear()
@@ -214,11 +226,16 @@ class FaissHNSWIndex:
     def save(self, path: str) -> None:
         with self._lock:
             faiss.write_index(self.index, path)
+            (Path(path).with_suffix(".map.json")).write_text(json.dumps(self._id_map))
             log.info("Index saved to %s", path)
 
     def load(self, path: str) -> None:
         with self._lock:
             self.index = faiss.read_index(path)
+            map_path = Path(path).with_suffix(".map.json")
+            if map_path.exists():
+                self._id_map = {int(k): v for k, v in json.loads(map_path.read_text()).items()}
+                self._reverse_id_map = {v: int(k) for k, v in self._id_map.items()}
             self._stats.total_vectors = self.index.ntotal
             self._cache.clear()
             log.info("Index loaded from %s", path)
