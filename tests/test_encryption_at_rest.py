@@ -3,6 +3,7 @@ Ensures `security.encrypt_at_rest=True` really hides plaintext
 inside the SQLite backing file (uses SQLCipher driver).
 """
 import pathlib
+
 import pytest
 
 from memory_system.config.settings import UnifiedSettings
