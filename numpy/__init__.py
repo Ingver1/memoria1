@@ -9,7 +9,10 @@ from typing import Any, Iterable, List, Sequence
 
 
 class float32(float):
-    pass
+    def __new__(cls, value: Any = 0.0):
+        if isinstance(value, (list, ndarray)):
+            return ndarray(value, dtype=float32)
+        return float.__new__(cls, float(value))
 
 
 class float64(float):
@@ -63,6 +66,17 @@ class ndarray(list[Any]):
             self.dtype = dtype
         return self
 
+    def tolist(self) -> list[Any]:
+        out = []
+        for item in self:
+            if isinstance(item, ndarray):
+                out.append(item.tolist())
+            elif isinstance(item, list):
+                out.append([i.tolist() if isinstance(i, ndarray) else i for i in item])
+            else:
+                out.append(item)
+        return out
+        
     def reshape(self, *shape: int) -> "ndarray":
         if len(shape) == 2 and shape[0] == 1 and shape[1] == -1:
             flat: list[Any] = []
@@ -254,6 +268,12 @@ linalg = _Linalg()
 
 class _Random:
     @staticmethod
+    def random(size: int | None = None) -> ndarray | float:
+        if size is None:
+            return _random.random()
+        return ndarray([_random.random() for _ in range(size)])
+        
+    @staticmethod
     def rand(*shape: int) -> ndarray:
         if len(shape) == 1:
             return ndarray([_random.random() for _ in range(shape[0])])
@@ -262,6 +282,12 @@ class _Random:
         else:
             raise NotImplementedError
 
+@staticmethod
+    def default_rng(seed: int | None = None) -> "_Random":
+        if seed is not None:
+            _random.seed(seed)
+        return _Random()
+        
 random = _Random()
 
 class _Testing:
