@@ -30,6 +30,10 @@ class _TestResponse:
         return ""
 
     @property
+    def content(self) -> bytes:
+        return getattr(self._resp, "content", b"") or b""
+        
+    @property
     def headers(self) -> Dict[str, str]:
         return getattr(self._resp, "headers", {})
 
