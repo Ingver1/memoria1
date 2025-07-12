@@ -305,7 +305,7 @@ class TestVectorStorePerformance:
 
         # Test flush performance
         start_time = time.time()
-        vector_store.flush()
+        asyncio.run(vector_store.flush())
         flush_time = time.time() - start_time
 
         assert flush_time < 5.0, f"Flush time: {flush_time:.3f}s"
