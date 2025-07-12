@@ -1,7 +1,7 @@
 import pytest
 
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from fastapi.testclient import ClientHelper
 from memory_system.api.routes.memory import router as memory_router
 from memory_system.core.store import SQLiteMemoryStore, lifespan_context
 
@@ -14,12 +14,12 @@ def app(tmp_path):
 
 
 def test_startup_injects_store(app):
-    with TestClient(app) as client:
+    with ClientHelper(app) as client:
         assert isinstance(client.app.state.memory_store, SQLiteMemoryStore)
 
 
 def test_add_get_search_cycle(app):
-    with TestClient(app) as client:
+    with ClientHelper(app) as client:
         payload = {"text": "hello world"}
         resp = client.post("/api/v1/memory/", json=payload)
         assert resp.status_code == 201
@@ -37,7 +37,7 @@ def test_add_get_search_cycle(app):
 
 
 def test_pii_redaction(app):
-    with TestClient(app) as client:
+    with ClientHelper(app) as client:
         payload = {"text": "Email me at user@example.com"}
         resp = client.post("/api/v1/memory/", json=payload)
         assert resp.status_code == 201
@@ -51,7 +51,7 @@ def test_pii_redaction(app):
 
 
 def test_best_memories_endpoint(app):
-    with TestClient(app) as client:
+    with ClientHelper(app) as client:
         for i in range(3):
             payload = {"text": f"mem {i}"}
             client.post("/api/v1/memory/", json=payload)
