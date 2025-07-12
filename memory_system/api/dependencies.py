@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import functools
 import logging
+import typing
 
 from fastapi import HTTPException, status
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.store import EnhancedMemoryStore
+from memory_system.core.store import get_store as _core_get_store
 from memory_system.utils.security import EnhancedPIIFilter
 
 __all__ = [
     "get_settings",
     "get_memory_store",
+    "get_store",
     "get_pii_filter",
     "require_api_enabled",
 ]
@@ -36,6 +39,12 @@ def get_memory_store() -> EnhancedMemoryStore:
 def get_pii_filter() -> EnhancedPIIFilter:
     """Provide a cached PII filter instance."""
     return EnhancedPIIFilter()
+
+
+def get_store() -> typing.Generator[EnhancedMemoryStore, None, None]:
+    """Yield the global memory store for dependency injection."""
+    store = get_memory_store()
+    yield store
 
 
 def require_api_enabled(settings: UnifiedSettings | None = None) -> None:
