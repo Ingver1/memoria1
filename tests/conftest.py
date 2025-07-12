@@ -1,6 +1,7 @@
 """Pytest configuration and fixtures."""
 
 import inspect
+import logging
 import os
 import tempfile
 from pathlib import Path
@@ -11,6 +12,7 @@ import pytest
 def pytest_configure(config):
     """Register custom markers used in the test suite."""
     config.addinivalue_line("markers", "asyncio: mark async test")
+    config.addinivalue_line("markers", "perf: marks performance / load tests")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -34,6 +36,14 @@ os.environ.update(
     }
 )
 
+
+@pytest.fixture(autouse=True)
+def _raise_log_level(caplog):
+    """
+    Silence DEBUG chatter from memory_system.core.index during CI.
+    """
+    caplog.set_level(logging.INFO, logger="memory_system.core.index")
+    
 
 @pytest.fixture(scope="session")
 def test_settings():
