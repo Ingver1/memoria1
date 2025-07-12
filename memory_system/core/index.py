@@ -103,7 +103,7 @@ class FaissHNSWIndex:
     def _to_float32(arr: NDArray) -> NDArray:
         return arr.astype(np.float32, copy=False)
 
-def _string_to_int(self, s: str) -> int:
+    def _string_to_int(self, s: str) -> int:
         if s in self._reverse_id_map:
             return self._reverse_id_map[s]
         int_id = len(self._id_map) + 1
