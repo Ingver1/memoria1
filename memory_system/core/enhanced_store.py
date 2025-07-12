@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+from cryptography.fernet import Fernet
 
 __all__ = ["EnhancedMemoryStore", "HealthComponent"]
 
@@ -37,7 +38,10 @@ class EnhancedMemoryStore:
         self.settings = settings
         self._start_time = time.time()
         # Underlying storage components
-        self._store = SQLiteMemoryStore(str(settings.database.db_path))
+        dsn = str(settings.database.db_path)
+        if hasattr(settings, "storage") and getattr(settings.storage, "database_url", None):
+            dsn = settings.storage.database_url
+        self._store = SQLiteMemoryStore(dsn)
         self._index = FaissHNSWIndex(dim=settings.model.vector_dim)
         self._memory_count = 0
 
@@ -92,18 +96,23 @@ class EnhancedMemoryStore:
         text: str,
         role: str | None = None,
         tags: list[str] | None = None,
-        importance: float,
+        importance: float = 0.0,
         valence: float = 0.0,
         emotional_intensity: float = 0.0,
         embedding: list[float],
-        created_at: float,
-        updated_at: float,
+        created_at: float | None = None,
+        updated_at: float | None = None,
     ) -> Any:
         """Add a memory entry to the database and index."""
+        ts = created_at if created_at is not None else time.time()
+        text_to_store = text
+        if self.settings.security.encrypt_at_rest:
+            f = Fernet(self.settings.security.encryption_key.encode())
+            text_to_store = f.encrypt(text.encode()).decode()
         mem = Memory(
             id=str(uuid.uuid4()),
-            text=text,
-            created_at=dt.datetime.fromtimestamp(created_at, tz=dt.timezone.utc),
+            text=text_to_store,
+            created_at=dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc),
             importance=importance,
             valence=valence,
             emotional_intensity=emotional_intensity,
