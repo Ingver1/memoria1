@@ -2,8 +2,9 @@
 Micro-benchmark: measure queries-per-second for different `ef_search`
 values to help pick a sane default for FAISS indexes.
 """
-import numpy as np
 import pytest
+
+import numpy as np
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.enhanced_store import EnhancedMemoryStore
 
