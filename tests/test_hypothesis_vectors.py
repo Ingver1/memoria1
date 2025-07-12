@@ -4,10 +4,11 @@ Property-based tests for EnhancedMemoryStore vector workflow.
 The goal: whatever random float32 vector we add must be retrievable
 via an exact semantic search; the store must never raise or lose data.
 """
-import numpy as np
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
+import numpy as np
 from memory_system.config.settings import UnifiedSettings
 from memory_system.core.enhanced_store import EnhancedMemoryStore
 
