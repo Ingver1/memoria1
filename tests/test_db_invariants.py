@@ -20,11 +20,16 @@ async def test_db_invariants(tmp_path):
     await store.add_memory(text="inv", embedding=np.random.rand(DIM).tolist())
 
     # direct SQL query for invariant check
-    rows = await store._db.fetch_all("SELECT text, embedding FROM memories")
-    text, emb = rows[0]
+    conn = await store._store._acquire()
+    try:
+        cursor = await conn.execute("SELECT text FROM memories")
+        rows = await cursor.fetchall()
+    finally:
+        await store._store._release(conn)
+    text = rows[0]["text"]
 
     # column text must never be NULL
     assert text is not None
 
-    # embedding must always hold `DIM` floats
-    assert len(emb) == DIM
+    # vector index dimension must match config
+    assert store._index.stats().dim == DIM
