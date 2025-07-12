@@ -141,3 +141,8 @@ class ClientHelper:
 
     def delete(self, url: str, *, params: Dict[str, Any] | None = None) -> _TestResponse:
         return self._call("DELETE", url, params=params)
+
+
+TestClient = ClientHelper
+
+__all__ = ["ClientHelper", "TestClient"]
