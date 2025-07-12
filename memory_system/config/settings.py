@@ -325,7 +325,7 @@ class UnifiedSettings(BaseSettings):
 
     def save_to_file(self, path: Path) -> None:
         with open(path, "w", encoding="utf-8") as f:
-            json.dump(self.model_dump(exclude={"storage"}), f, indent=2
+            json.dump(self.model_dump(exclude={"storage"}), f, indent=2)
 
     @classmethod
     def load_from_file(cls, path: Path) -> "UnifiedSettings":
