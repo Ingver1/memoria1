@@ -3,11 +3,11 @@ Fuzzes the whole FastAPI surface against its OpenAPI schema.
 Schemathesis autogenerates thousands of requests with random payloads.
 """
 import pytest
-import schemathesis
-from schemathesis import DataGenerationMethod
 
+import schemathesis
 from memory_system.api.app import create_app
 from memory_system.config.settings import UnifiedSettings
+from schemathesis import DataGenerationMethod
 
 schema = schemathesis.from_path(
     "tests/st_api_fuzz.yaml",
