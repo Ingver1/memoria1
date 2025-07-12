@@ -38,7 +38,7 @@ class _TestResponse:
             raise RuntimeError(f"HTTP {self.status_code}")
 
 
-class TestClient:
+class ClientHelper:
     def __init__(self, app: FastAPI, base_url: str = "http://test") -> None:
         self.app = app
         self.base_url = base_url.rstrip("/")
@@ -46,7 +46,7 @@ class TestClient:
         self._lifespan_cm = None
 
     # Context manager -------------------------------------------------
-    def __enter__(self) -> "TestClient":
+    def __enter__(self) -> "ClientHelper":
         asyncio.set_event_loop(self._loop)
         self._loop.run_until_complete(self._startup())
         return self
