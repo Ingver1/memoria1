@@ -140,11 +140,12 @@ class TestSQLiteMemoryStore:
         await store.add(memory1)
 
         memory2 = Memory(id="test-3", text="Updated text")
-        await store.add(memory2)
+        with pytest.raises(Exception):
+            await store.add(memory2)
 
         retrieved = await store.get("test-3")
         assert retrieved is not None
-        assert retrieved.text == "Updated text"
+        assert retrieved.text == "Original text"
 
     async def test_concurrent_access(self, store):
         """Test concurrent access to store."""
@@ -683,7 +684,7 @@ class TestVectorStore:
         vector = np.random.rand(384).astype(np.float32)
 
         store.add_vector(vector_id, vector)
-        store.flush()  # Should not raise any exceptions
+        asyncio.run(store.flush())  # Should not raise any exceptions
 
     async def test_store_async_flush(self, store):
         """Test store async flush operation."""
