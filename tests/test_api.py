@@ -160,6 +160,13 @@ class TestHealthEndpoints:
 
         assert exc_info.value.status_code == 404
 
+    def test_root_metrics_endpoint_disabled(self) -> None:
+        """/metrics should return 404 when metrics are disabled."""
+        app = create_app(UnifiedSettings.for_testing())
+        with ClientHelper(app) as client:
+            resp = client.get("/metrics")
+            assert resp.status_code == 404
+
 
 class TestAdminEndpoints:
     """Test admin endpoints."""
