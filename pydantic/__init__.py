@@ -61,7 +61,7 @@ class BaseModel:
                 result[key] = str(value)
             else:
                 result[key] = value
-                if exclude:
+        if exclude:
             for field in exclude:
                 result.pop(field, None)
         return result
