@@ -116,8 +116,8 @@ pytest -q
 If tests fail with ``async def functions are not natively supported`` install
 the ``pytest-asyncio`` plugin::
 
-   pip install pytest-asyncio>=1.0.0
-
+   pip install pytest-asyncio>=0.21
+   
 This allows ``pytest`` to run async tests without warnings.
 
 # build & start containerised dev stack
