@@ -39,7 +39,7 @@ class Memory:
     id: str
     text: str
     created_at: dt.datetime = field(
-        default_factory=lambda: dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc)
+        default_factory=lambda: dt.datetime.now(dt.timezone.utc)
     )
     importance: float = 0.0  # 0..1
     valence: float = 0.0  # -1..1 emotional polarity
@@ -77,7 +77,7 @@ class Memory:
         return Memory(
             id=str(uuid.uuid4()),
             text=text,
-            created_at=dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc),
+            created_at=dt.datetime.now(dt.timezone.utc),
             importance=importance,
             valence=valence,
             emotional_intensity=emotional_intensity,
@@ -319,7 +319,7 @@ class SQLiteMemoryStore:
             mcreated = getattr(
                 mem_obj,
                 "created_at",
-                dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc),
+                dt.datetime.now(dt.timezone.utc),
             )
             mimportance = getattr(mem_obj, "importance", 0.0)
             mvalence = getattr(mem_obj, "valence", 0.0)
